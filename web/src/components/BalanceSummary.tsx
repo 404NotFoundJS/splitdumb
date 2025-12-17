@@ -5,12 +5,16 @@ interface BalanceSummaryProps {
 }
 
 const BalanceSummary: React.FC<BalanceSummaryProps> = memo(({ balances }) => {
+  const sortedBalances = Object.entries(balances).sort(([a], [b]) =>
+    a.localeCompare(b),
+  );
+
   return (
     <div className="card dashboard-card mt-3">
       <div className="card-body">
         <h5 className="card-title">Balance Summary</h5>
         <div className="list-group">
-          {Object.entries(balances).map(([user, balance]) => (
+          {sortedBalances.map(([user, balance]) => (
             <div key={user} className="balance-item list-group-item">
               <span className="balance-name">{user}</span>
               <span
