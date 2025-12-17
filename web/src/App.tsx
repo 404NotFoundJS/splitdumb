@@ -12,8 +12,6 @@ function App() {
   const [currentGroupId, setCurrentGroupId] = useState<number>(1);
   const [showCreateGroup, setShowCreateGroup] = useState(false);
   const [newGroupName, setNewGroupName] = useState("");
-  const [editingGroupId, setEditingGroupId] = useState<number | null>(null);
-  const [editGroupName, setEditGroupName] = useState("");
 
   useEffect(() => {
     fetchGroups();
@@ -57,19 +55,15 @@ function App() {
     }
   };
 
-  const handleUpdateGroup = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editGroupName.trim() || !editingGroupId) return;
-
+  const handleUpdateGroup = async (groupId: number, newName: string) => {
     try {
-      await updateGroup(editingGroupId, editGroupName);
+      await updateGroup(groupId, newName);
       await fetchGroups();
-      setEditingGroupId(null);
-      setEditGroupName("");
       handleUpdate();
     } catch (error) {
       console.error("Failed to update group:", error);
       alert("Failed to update group");
+      throw error;
     }
   };
 
@@ -88,15 +82,6 @@ function App() {
     } catch (error: any) {
       console.error("Failed to delete group:", error);
       alert(error.response?.data?.error || "Failed to delete group");
-    }
-  };
-
-  const startEditGroup = (groupId: number) => {
-    const group = groups.find(g => g.id === groupId);
-    if (group) {
-      setEditingGroupId(groupId);
-      setEditGroupName(group.name);
-      setShowCreateGroup(false);
     }
   };
 
@@ -123,10 +108,7 @@ function App() {
               </select>
               <button
                 className="btn btn-primary"
-                onClick={() => {
-                  setShowCreateGroup(!showCreateGroup);
-                  setEditingGroupId(null);
-                }}
+                onClick={() => setShowCreateGroup(!showCreateGroup)}
               >
                 + New Group
               </button>
@@ -159,33 +141,6 @@ function App() {
               </form>
             </div>
           )}
-          {editingGroupId && (
-            <div style={{ marginTop: "1rem" }}>
-              <form onSubmit={handleUpdateGroup} style={{ display: "flex", gap: "0.5rem" }}>
-                <input
-                  type="text"
-                  className="form-control"
-                  placeholder="Group name"
-                  value={editGroupName}
-                  onChange={(e) => setEditGroupName(e.target.value)}
-                  style={{ maxWidth: "250px" }}
-                />
-                <button type="submit" className="btn btn-success">
-                  Save
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  onClick={() => {
-                    setEditingGroupId(null);
-                    setEditGroupName("");
-                  }}
-                >
-                  Cancel
-                </button>
-              </form>
-            </div>
-          )}
         </div>
       </header>
 
@@ -199,7 +154,7 @@ function App() {
             <Dashboard
               refresh={refreshDashboard}
               onRefresh={handleUpdate}
-              onEditGroup={() => startEditGroup(currentGroupId)}
+              onUpdateGroup={handleUpdateGroup}
               onDeleteGroup={() => handleDeleteGroup(currentGroupId)}
             />
           </div>

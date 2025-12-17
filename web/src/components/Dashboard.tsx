@@ -5,15 +5,17 @@ import * as Types from '../types';
 interface DashboardProps {
     refresh: boolean;
     onRefresh: () => void;
-    onEditGroup: () => void;
+    onUpdateGroup: (groupId: number, newName: string) => Promise<void>;
     onDeleteGroup: () => void;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ refresh, onRefresh, onEditGroup, onDeleteGroup }) => {
+const Dashboard: React.FC<DashboardProps> = ({ refresh, onRefresh, onUpdateGroup, onDeleteGroup }) => {
     const [group, setGroup] = useState<Types.Group | null>(null);
     const [balances, setBalances] = useState<Record<string, number>>({});
     const [settlements, setSettlements] = useState<Types.Settlement[]>([]);
     const [error, setError] = useState<string | null>(null);
+    const [isEditing, setIsEditing] = useState(false);
+    const [editedName, setEditedName] = useState("");
 
     useEffect(() => {
         fetchGroupData();
@@ -49,6 +51,30 @@ const Dashboard: React.FC<DashboardProps> = ({ refresh, onRefresh, onEditGroup, 
         }
     };
 
+    const startEdit = () => {
+        if (group) {
+            setEditedName(group.name);
+            setIsEditing(true);
+        }
+    };
+
+    const cancelEdit = () => {
+        setIsEditing(false);
+        setEditedName("");
+    };
+
+    const saveEdit = async () => {
+        if (!group || !editedName.trim()) return;
+
+        try {
+            await onUpdateGroup(group.id, editedName);
+            setIsEditing(false);
+            setEditedName("");
+        } catch (error) {
+            console.error("Failed to update group:", error);
+        }
+    };
+
     if (error) {
         return <div className="alert alert-danger mt-3">Error loading data: {error}</div>;
     }
@@ -66,25 +92,54 @@ const Dashboard: React.FC<DashboardProps> = ({ refresh, onRefresh, onEditGroup, 
         <div>
             <div className="card dashboard-card">
                 <div className="dashboard-group-header">
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <h3 className="dashboard-group-name">{group.name}</h3>
-                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    {isEditing ? (
+                        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                            <input
+                                type="text"
+                                className="form-control"
+                                value={editedName}
+                                onChange={(e) => setEditedName(e.target.value)}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter') saveEdit();
+                                    if (e.key === 'Escape') cancelEdit();
+                                }}
+                                autoFocus
+                                style={{ flex: '1', minWidth: '200px' }}
+                            />
+                            <button
+                                className="btn btn-sm btn-success"
+                                onClick={saveEdit}
+                            >
+                                💾 Save
+                            </button>
                             <button
                                 className="btn btn-sm btn-secondary"
-                                onClick={onEditGroup}
-                                title="Edit group name"
+                                onClick={cancelEdit}
                             >
-                                ✏️ Edit
-                            </button>
-                            <button
-                                className="btn btn-sm btn-danger"
-                                onClick={onDeleteGroup}
-                                title="Delete group"
-                            >
-                                🗑️ Delete
+                                ✖️ Cancel
                             </button>
                         </div>
-                    </div>
+                    ) : (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <h3 className="dashboard-group-name">{group.name}</h3>
+                            <div style={{ display: 'flex', gap: '0.5rem' }}>
+                                <button
+                                    className="btn btn-sm btn-secondary"
+                                    onClick={startEdit}
+                                    title="Edit group name"
+                                >
+                                    ✏️ Edit
+                                </button>
+                                <button
+                                    className="btn btn-sm btn-danger"
+                                    onClick={onDeleteGroup}
+                                    title="Delete group"
+                                >
+                                    🗑️ Delete
+                                </button>
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 <div className="card-body settlement-card">
