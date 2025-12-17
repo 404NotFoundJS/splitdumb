@@ -305,9 +305,13 @@ async fn delete_group(
         return Err(AppError::BadRequest("Cannot delete the last group".to_string()));
     }
 
-    // Prevent deleting the current group
+    // If deleting the current group, switch to another group first
     if app_data.current_group_id == id {
-        return Err(AppError::BadRequest("Cannot delete the current group. Switch to another group first.".to_string()));
+        // Find another group to switch to
+        let new_group = app_data.groups.iter()
+            .find(|g| g.id != id)
+            .ok_or_else(|| AppError::InternalError("No other group found to switch to".to_string()))?;
+        app_data.current_group_id = new_group.id;
     }
 
     let index = app_data.groups.iter().position(|g| g.id == id)
@@ -321,7 +325,7 @@ async fn delete_group(
     save_app_data(&app_data_clone)
         .map_err(|e| AppError::InternalError(format!("Failed to save: {}", e)))?;
 
-    Ok(Json(serde_json::json!({ "success": true })))
+    Ok(Json(serde_json::json!({ "success": true, "switched_group": app_data_clone.current_group_id })))
 }
 
 async fn create_user(

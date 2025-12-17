@@ -76,7 +76,13 @@ function App() {
     }
 
     try {
-      await deleteGroup(groupId);
+      const response = await deleteGroup(groupId);
+
+      // If backend switched groups, update current group
+      if (response.switched_group) {
+        setCurrentGroupId(response.switched_group);
+      }
+
       await fetchGroups();
       handleUpdate();
     } catch (error: any) {
