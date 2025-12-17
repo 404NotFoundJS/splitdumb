@@ -7,7 +7,7 @@ COPY web/ ./
 RUN bun run build
 
 # Stage 2: Build backend dependencies (cached layer)
-FROM rust:1.83-alpine AS backend-deps
+FROM rust:1.85-alpine AS backend-deps
 RUN apk add --no-cache musl-dev
 WORKDIR /app
 COPY Cargo.toml Cargo.lock ./
