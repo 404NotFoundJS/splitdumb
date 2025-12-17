@@ -13,9 +13,6 @@ pub enum AppError {
     #[error("Bad request: {0}")]
     BadRequest(String),
 
-    #[error("Internal error: {0}")]
-    InternalError(String),
-
     #[error("Lock error: failed to acquire lock")]
     LockError,
 
@@ -28,7 +25,6 @@ impl IntoResponse for AppError {
         let (status, message) = match &self {
             AppError::NotFound(msg) => (StatusCode::NOT_FOUND, msg.clone()),
             AppError::BadRequest(msg) => (StatusCode::BAD_REQUEST, msg.clone()),
-            AppError::InternalError(msg) => (StatusCode::INTERNAL_SERVER_ERROR, msg.clone()),
             AppError::LockError => (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "Failed to acquire lock".to_string(),

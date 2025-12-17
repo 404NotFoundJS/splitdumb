@@ -57,6 +57,18 @@ const Dashboard: React.FC<DashboardProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const fetchGroupOnly = useCallback(async () => {
+    try {
+      const groupData = await getGroup();
+      setGroup(groupData);
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : "Failed to refresh group",
+      );
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   useEffect(() => {
     fetchGroupData();
   }, [refreshKey, fetchGroupData]);
@@ -129,11 +141,22 @@ const Dashboard: React.FC<DashboardProps> = ({
     toast.confirm(
       `Mark ${from} as having paid ${to} $${amount.toFixed(2)}?`,
       async () => {
+        setSettlements((prev) =>
+          prev.map((s) =>
+            s.from === from && s.to === to ? { ...s, settled: true } : s,
+          ),
+        );
+
         try {
           await settle(from, to, amount);
-          onRefresh(); // Refresh to show settlement in expenses and recalculate
+          await fetchGroupOnly();
           toast.success(`Settlement recorded: ${from} paid ${to}`);
         } catch (err) {
+          setSettlements((prev) =>
+            prev.map((s) =>
+              s.from === from && s.to === to ? { ...s, settled: false } : s,
+            ),
+          );
           toast.error(
             err instanceof Error ? err.message : "Failed to record settlement",
           );
@@ -159,7 +182,6 @@ const Dashboard: React.FC<DashboardProps> = ({
 
   return (
     <div className="dashboard">
-      {/* Group Header */}
       <div className="card dashboard-card">
         <GroupHeader
           groupName={group.name}
@@ -169,15 +191,12 @@ const Dashboard: React.FC<DashboardProps> = ({
         />
       </div>
 
-      {/* Three-column layout for main content */}
       <div className="dashboard-grid">
-        {/* Column 1: Members */}
         <div className="dashboard-column">
           <MemberList members={group.members} onDeleteUser={handleDeleteUser} />
           <UserForm onUserAdded={onRefresh} />
         </div>
 
-        {/* Column 2: Expenses */}
         <div className="dashboard-column dashboard-column-wide">
           <ExpenseList
             expenses={group.expenses}
@@ -186,7 +205,6 @@ const Dashboard: React.FC<DashboardProps> = ({
           <ExpenseForm onExpenseAdded={onRefresh} refreshKey={refreshKey} />
         </div>
 
-        {/* Column 3: Summary */}
         <div className="dashboard-column">
           <BalanceSummary balances={balances} />
           <SettlementCard

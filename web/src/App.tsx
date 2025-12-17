@@ -15,23 +15,29 @@ function App() {
   const toast = useToast();
   const [refreshKey, setRefreshKey] = useState(0);
   const [groups, setGroups] = useState<Types.Group[]>([]);
-  const [currentGroupId, setCurrentGroupId] = useState<number>(1);
+  const [currentGroupId, setCurrentGroupId] = useState<number>(0);
   const [showCreateGroup, setShowCreateGroup] = useState(false);
   const [newGroupName, setNewGroupName] = useState("");
+  const [isLoading, setIsLoading] = useState(true);
 
   const fetchGroups = useCallback(async () => {
     try {
       const fetchedGroups = await listGroups();
       setGroups(fetchedGroups);
+      if (fetchedGroups.length > 0 && currentGroupId === 0) {
+        setCurrentGroupId(fetchedGroups[0].id);
+      }
     } catch (error) {
       toast.error(
         error instanceof Error ? error.message : "Failed to fetch groups",
       );
+    } finally {
+      setIsLoading(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [toast]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchGroups();
   }, [fetchGroups]);
 
@@ -120,7 +126,7 @@ function App() {
         try {
           const response = await deleteGroup(groupId);
 
-          if (response.switched_group) {
+          if (response.switched_group !== undefined) {
             setCurrentGroupId(response.switched_group);
           }
 
@@ -153,6 +159,43 @@ function App() {
     setShowCreateGroup(false);
     setNewGroupName("");
   };
+
+  if (isLoading) {
+    return (
+      <div className="welcome-page">
+        <div className="loading-state">
+          <div className="loading-spinner"></div>
+          <p>Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (groups.length === 0) {
+    return (
+      <div className="welcome-page">
+        <div className="welcome-card">
+          <h1 className="welcome-title">Splitdumb</h1>
+          <p className="welcome-subtitle">
+            Split expenses with friends, the simple way.
+          </p>
+          <form onSubmit={handleCreateGroup} className="welcome-form">
+            <input
+              type="text"
+              className="form-control welcome-input"
+              placeholder="Enter group name (e.g., Trip to Paris)"
+              value={newGroupName}
+              onChange={(e) => setNewGroupName(e.target.value)}
+              autoFocus
+            />
+            <button type="submit" className="btn btn-primary welcome-button">
+              Create Group
+            </button>
+          </form>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <>

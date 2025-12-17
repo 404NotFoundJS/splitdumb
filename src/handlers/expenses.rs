@@ -6,7 +6,7 @@ use serde::Deserialize;
 
 use crate::errors::{AppError, AppResult};
 use crate::logic::add_expense;
-use crate::models::Expense;
+use crate::models::{Expense, SettledSettlement};
 use crate::storage;
 
 use super::SharedState;
@@ -115,6 +115,17 @@ pub async fn delete_expense(
         .position(|e| e.id == id)
         .ok_or_else(|| AppError::NotFound(format!("Expense with id {} not found", id)))?;
 
+    let expense = &group.expenses[index];
+    if expense.category.as_deref() == Some("Settlement") {
+        let payer_name = &expense.payer.name;
+        let participant_name = expense.participants.first().map(|p| &p.name);
+        if let Some(to_name) = participant_name {
+            group
+                .settled_settlements
+                .retain(|s| !(s.from == *payer_name && s.to == *to_name));
+        }
+    }
+
     group.expenses.remove(index);
 
     let app_data_clone = app_data.clone();
@@ -174,6 +185,13 @@ pub async fn settle(
     };
 
     add_expense(expense.clone(), group);
+
+    group.settled_settlements.push(SettledSettlement {
+        from: payload.from.clone(),
+        to: payload.to.clone(),
+        amount: payload.amount,
+        settled_at: chrono::Utc::now().to_rfc3339(),
+    });
 
     let app_data_clone = app_data.clone();
     drop(app_data);

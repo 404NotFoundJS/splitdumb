@@ -41,11 +41,16 @@ pub struct SettlementsResponse {
 pub async fn get_current_group(State(state): State<SharedState>) -> AppResult<Json<Group>> {
     let app_data = state.read().map_err(|_| AppError::LockError)?;
 
+    if app_data.groups.is_empty() {
+        return Err(AppError::NotFound("No groups exist".to_string()));
+    }
+
     let current_id = app_data.current_group_id;
     let group = app_data
         .groups
         .iter()
         .find(|g| g.id == current_id)
+        .or_else(|| app_data.groups.first())
         .ok_or_else(|| AppError::NotFound("Current group not found".to_string()))?;
 
     Ok(Json(group.clone()))
@@ -76,9 +81,15 @@ pub async fn create_group(
         members: vec![],
         expenses: vec![],
         simplify_debts: false,
+        settled_settlements: vec![],
     };
 
+    let is_first_group = app_data.groups.is_empty();
     app_data.groups.push(group.clone());
+
+    if is_first_group {
+        app_data.current_group_id = group.id;
+    }
 
     let app_data_clone = app_data.clone();
     drop(app_data);
@@ -150,19 +161,6 @@ pub async fn delete_group(
 ) -> AppResult<Json<serde_json::Value>> {
     let mut app_data = state.write().map_err(|_| AppError::LockError)?;
 
-    if app_data.groups.len() == 1 {
-        return Err(AppError::BadRequest(
-            "Cannot delete the last group".to_string(),
-        ));
-    }
-
-    if app_data.current_group_id == id {
-        let new_group = app_data.groups.iter().find(|g| g.id != id).ok_or_else(|| {
-            AppError::InternalError("No other group found to switch to".to_string())
-        })?;
-        app_data.current_group_id = new_group.id;
-    }
-
     let index = app_data
         .groups
         .iter()
@@ -171,14 +169,22 @@ pub async fn delete_group(
 
     app_data.groups.remove(index);
 
+    let switched_group = if app_data.current_group_id == id {
+        app_data.current_group_id = app_data.groups.first().map(|g| g.id).unwrap_or(0);
+        Some(app_data.current_group_id)
+    } else {
+        None
+    };
+
     let app_data_clone = app_data.clone();
     drop(app_data);
 
     storage::save(&app_data_clone)?;
 
-    Ok(Json(
-        serde_json::json!({ "success": true, "switched_group": app_data_clone.current_group_id }),
-    ))
+    Ok(Json(serde_json::json!({
+        "success": true,
+        "switched_group": switched_group
+    })))
 }
 
 pub async fn get_balances(State(state): State<SharedState>) -> AppResult<Json<BalanceResponse>> {
@@ -207,12 +213,19 @@ pub async fn get_settlements(
         .find(|g| g.id == current_id)
         .ok_or_else(|| AppError::NotFound("Current group not found".to_string()))?;
 
-    // Use group's simplify_debts setting to determine which algorithm to use
-    let settlements = if group.simplify_debts {
+    let mut settlements = if group.simplify_debts {
         calculate_simplified_settlements(group)
     } else {
         calculate_settlements(group)
     };
+
+    for settlement in &mut settlements {
+        settlement.settled = group
+            .settled_settlements
+            .iter()
+            .any(|s| s.from == settlement.from && s.to == settlement.to);
+    }
+
     Ok(Json(SettlementsResponse { settlements }))
 }
 

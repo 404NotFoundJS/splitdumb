@@ -26,6 +26,7 @@ export type Settlement = {
   from: string;
   to: string;
   amount: number;
+  settled: boolean;
 };
 
 export type BalanceResponse = {

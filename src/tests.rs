@@ -48,6 +48,7 @@ mod tests {
             members,
             expenses,
             simplify_debts: false,
+            settled_settlements: vec![],
         }
     }
 

@@ -3,7 +3,7 @@ use std::io::Read;
 use std::sync::OnceLock;
 
 use crate::errors::AppError;
-use crate::models::{AppData, Group, User};
+use crate::models::AppData;
 
 static DATA_FILE: OnceLock<String> = OnceLock::new();
 
@@ -25,7 +25,10 @@ pub fn load() -> AppData {
             }
         }
     }
-    create_default()
+    AppData {
+        groups: vec![],
+        current_group_id: 0,
+    }
 }
 
 pub fn save(app_data: &AppData) -> Result<(), AppError> {
@@ -34,31 +37,4 @@ pub fn save(app_data: &AppData) -> Result<(), AppError> {
         .map_err(|e| AppError::StorageError(std::io::Error::new(std::io::ErrorKind::Other, e)))?;
     fs::write(path, json)?;
     Ok(())
-}
-
-fn create_default() -> AppData {
-    let default_group = Group {
-        id: 1,
-        name: "Trip to Paris".to_string(),
-        members: vec![
-            User {
-                id: 1,
-                name: "Alice".to_string(),
-            },
-            User {
-                id: 2,
-                name: "Bob".to_string(),
-            },
-        ],
-        expenses: vec![],
-        simplify_debts: false,
-    };
-
-    let app_data = AppData {
-        groups: vec![default_group],
-        current_group_id: 1,
-    };
-
-    let _ = save(&app_data);
-    app_data
 }

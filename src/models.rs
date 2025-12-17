@@ -18,6 +18,16 @@ pub struct Group {
     pub expenses: Vec<Expense>,
     #[serde(default)]
     pub simplify_debts: bool,
+    #[serde(default)]
+    pub settled_settlements: Vec<SettledSettlement>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct SettledSettlement {
+    pub from: String,
+    pub to: String,
+    pub amount: f64,
+    pub settled_at: String,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
