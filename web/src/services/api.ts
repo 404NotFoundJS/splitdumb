@@ -8,13 +8,13 @@ import type {
 } from "../types";
 import { logger } from "../utils/logger";
 
-// Use same hostname as the page, with backend port 3000
+// Use VITE_API_URL if set, otherwise use relative /api path
+// In dev with Vite proxy or in prod behind nginx, /api works correctly
 const getApiUrl = () => {
   if (import.meta.env.VITE_API_URL) {
     return import.meta.env.VITE_API_URL;
   }
-  const { protocol, hostname } = window.location;
-  return `${protocol}//${hostname}:3000/api`;
+  return "/api";
 };
 
 const API_URL = getApiUrl();

@@ -7,5 +7,11 @@ export default defineConfig({
   server: {
     host: true, // Expose on local network
     port: 5173,
+    proxy: {
+      "/api": {
+        target: "http://localhost:3000",
+        changeOrigin: true,
+      },
+    },
   },
 });
