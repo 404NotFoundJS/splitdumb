@@ -1,7 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
 import Dashboard from "./components/Dashboard";
-import UserForm from "./components/UserForm";
-import ExpenseForm from "./components/ExpenseForm";
 import {
   listGroups,
   createGroup,
@@ -215,23 +213,12 @@ function App() {
       </header>
 
       <div className="app-container">
-        <div className="row">
-          <div className="col-md-6">
-            <UserForm onUserAdded={handleUpdate} />
-            <ExpenseForm
-              onExpenseAdded={handleUpdate}
-              refresh={refreshDashboard}
-            />
-          </div>
-          <div className="col-md-6">
-            <Dashboard
-              refresh={refreshDashboard}
-              onRefresh={handleUpdate}
-              onUpdateGroup={handleUpdateGroup}
-              onDeleteGroup={() => handleDeleteGroup(currentGroupId)}
-            />
-          </div>
-        </div>
+        <Dashboard
+          refresh={refreshDashboard}
+          onRefresh={handleUpdate}
+          onUpdateGroup={handleUpdateGroup}
+          onDeleteGroup={() => handleDeleteGroup(currentGroupId)}
+        />
       </div>
     </>
   );

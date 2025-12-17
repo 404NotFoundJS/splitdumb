@@ -10,10 +10,12 @@ import {
 import * as Types from "../types";
 import { useToast } from "../contexts/ToastContext";
 import GroupHeader from "./GroupHeader";
-import SettlementCard from "./SettlementCard";
-import BalanceSummary from "./BalanceSummary";
-import ExpenseList from "./ExpenseList";
 import MemberList from "./MemberList";
+import UserForm from "./UserForm";
+import ExpenseList from "./ExpenseList";
+import ExpenseForm from "./ExpenseForm";
+import BalanceSummary from "./BalanceSummary";
+import SettlementCard from "./SettlementCard";
 
 interface DashboardProps {
   refresh: boolean;
@@ -143,7 +145,8 @@ const Dashboard: React.FC<DashboardProps> = ({
   }
 
   return (
-    <div>
+    <div className="dashboard">
+      {/* Group Header */}
       <div className="card dashboard-card">
         <GroupHeader
           groupName={group.name}
@@ -151,15 +154,34 @@ const Dashboard: React.FC<DashboardProps> = ({
           onUpdateGroup={onUpdateGroup}
           onDeleteGroup={onDeleteGroup}
         />
-        <SettlementCard settlements={settlements} onSettle={handleSettle} />
       </div>
 
-      <BalanceSummary balances={balances} />
-      <ExpenseList
-        expenses={group.expenses}
-        onDeleteExpense={handleDeleteExpense}
-      />
-      <MemberList members={group.members} onDeleteUser={handleDeleteUser} />
+      {/* Two-column layout for main content */}
+      <div className="dashboard-grid">
+        {/* Left Column: Members & Expenses */}
+        <div className="dashboard-column">
+          {/* Members Section */}
+          <section className="dashboard-section">
+            <MemberList members={group.members} onDeleteUser={handleDeleteUser} />
+            <UserForm onUserAdded={onRefresh} />
+          </section>
+
+          {/* Expenses Section */}
+          <section className="dashboard-section">
+            <ExpenseList
+              expenses={group.expenses}
+              onDeleteExpense={handleDeleteExpense}
+            />
+            <ExpenseForm onExpenseAdded={onRefresh} refresh={refresh} />
+          </section>
+        </div>
+
+        {/* Right Column: Summary & Settlements */}
+        <div className="dashboard-column">
+          <BalanceSummary balances={balances} />
+          <SettlementCard settlements={settlements} onSettle={handleSettle} />
+        </div>
+      </div>
     </div>
   );
 };
