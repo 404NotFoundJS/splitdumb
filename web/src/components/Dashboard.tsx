@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { getGroup, getBalances, getSettlements, deleteExpense } from '../services/api';
+import { getGroup, getBalances, getSettlements, deleteExpense, deleteUser } from '../services/api';
 import * as Types from '../types';
 
 interface DashboardProps {
@@ -48,6 +48,19 @@ const Dashboard: React.FC<DashboardProps> = ({ refresh, onRefresh, onUpdateGroup
         } catch (err: any) {
             console.error("Failed to delete expense:", err);
             alert(err.response?.data?.error || "Failed to delete expense");
+        }
+    };
+
+    const handleDeleteUser = async (userId: number, userName: string) => {
+        if (!confirm(`Are you sure you want to remove ${userName} from this group?`)) {
+            return;
+        }
+        try {
+            await deleteUser(userId);
+            onRefresh();
+        } catch (err: any) {
+            console.error("Failed to delete user:", err);
+            alert(err.response?.data?.error || "Failed to delete user");
         }
     };
 
@@ -175,6 +188,33 @@ const Dashboard: React.FC<DashboardProps> = ({ refresh, onRefresh, onUpdateGroup
                             </div>
                         ))}
                     </div>
+                </div>
+            </div>
+
+            <div className="card dashboard-card mt-3">
+                <div className="card-body">
+                    <h5 className="card-title">👥 Group Members</h5>
+                    {group.members.length > 0 ? (
+                        <div className="list-group">
+                            {group.members.map((user) => (
+                                <div key={user.id} className="list-group-item" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <span className="balance-name">{user.name}</span>
+                                    <button
+                                        className="btn btn-sm btn-danger"
+                                        onClick={() => handleDeleteUser(user.id, user.name)}
+                                        title="Remove user from group"
+                                    >
+                                        Remove
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="empty-state">
+                            <div className="empty-state-icon">👤</div>
+                            <p>No members yet. Add someone to get started!</p>
+                        </div>
+                    )}
                 </div>
             </div>
 
