@@ -1,6 +1,15 @@
 import axios, { AxiosError } from "axios";
 
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000/api";
+// Use same hostname as the page, with backend port 3000
+const getApiUrl = () => {
+  if (import.meta.env.VITE_API_URL) {
+    return import.meta.env.VITE_API_URL;
+  }
+  const { protocol, hostname } = window.location;
+  return `${protocol}//${hostname}:3000/api`;
+};
+
+const API_URL = getApiUrl();
 
 const api = axios.create({
   baseURL: API_URL,
