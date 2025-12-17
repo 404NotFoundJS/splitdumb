@@ -23,7 +23,7 @@ RUN cargo build --release
 FROM alpine:3.21
 RUN apk add --no-cache ca-certificates nginx
 
-COPY --from=backend-builder /app/target/release/splitwise-rust /usr/local/bin/
+COPY --from=backend-builder /app/target/release/splitdumb /usr/local/bin/
 COPY --from=frontend-builder /app/dist /var/www/html
 
 RUN rm -f /etc/nginx/http.d/default.conf
