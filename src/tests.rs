@@ -26,6 +26,7 @@ mod tests {
                 participants: vec![user1.clone(), user2.clone()],
                 created_at: "2024-01-01T00:00:00Z".to_string(),
                 category: None,
+                notes: None,
             }],
         };
 
@@ -58,6 +59,7 @@ mod tests {
                     participants: vec![user1.clone(), user2.clone()],
                     created_at: "2024-01-01T00:00:00Z".to_string(),
                     category: None,
+                    notes: None,
                 },
                 Expense {
                     id: 2,
@@ -67,6 +69,7 @@ mod tests {
                     participants: vec![user1.clone(), user2.clone()],
                     created_at: "2024-01-01T00:00:00Z".to_string(),
                     category: None,
+                    notes: None,
                 },
             ],
         };

@@ -54,6 +54,7 @@ struct CreateExpenseRequest {
     payer: String,
     participants: Vec<String>,
     category: Option<String>,
+    notes: Option<String>,
 }
 
 #[derive(serde::Deserialize)]
@@ -69,6 +70,11 @@ struct CreateGroupRequest {
 #[derive(serde::Deserialize)]
 struct SwitchGroupRequest {
     group_id: usize,
+}
+
+#[derive(serde::Deserialize)]
+struct UpdateGroupRequest {
+    name: String,
 }
 
 #[derive(serde::Serialize)]
@@ -109,6 +115,7 @@ async fn main() {
             let app = Router::new()
                 .route("/api/groups", get(list_groups).post(create_group))
                 .route("/api/groups/current", put(switch_group))
+                .route("/api/groups/{id}", put(update_group).delete(delete_group))
                 .route("/api/group", get(get_current_group))
                 .route("/api/expenses", post(create_expense))
                 .route("/api/expenses/{id}", delete(delete_expense))
@@ -162,6 +169,7 @@ async fn main() {
                 participants: participant_users,
                 created_at: chrono::Utc::now().to_rfc3339(),
                 category: None,
+                notes: None,
             };
 
             add_expense(expense, group);
@@ -254,6 +262,66 @@ async fn switch_group(
         .map_err(|e| AppError::InternalError(format!("Failed to save: {}", e)))?;
 
     Ok(Json(serde_json::json!({ "success": true, "current_group_id": payload.group_id })))
+}
+
+async fn update_group(
+    State(state): State<SharedState>,
+    Path(id): Path<usize>,
+    Json(payload): Json<UpdateGroupRequest>,
+) -> Result<Json<Group>, AppError> {
+    let name = payload.name.trim();
+    if name.is_empty() {
+        return Err(AppError::BadRequest("Group name cannot be empty".to_string()));
+    }
+
+    let mut app_data = state.write()
+        .map_err(|e| AppError::InternalError(format!("Failed to acquire lock: {}", e)))?;
+
+    let group = app_data.groups.iter_mut()
+        .find(|g| g.id == id)
+        .ok_or_else(|| AppError::NotFound(format!("Group with id {} not found", id)))?;
+
+    group.name = name.to_string();
+    let updated_group = group.clone();
+
+    let app_data_clone = app_data.clone();
+    drop(app_data);
+
+    save_app_data(&app_data_clone)
+        .map_err(|e| AppError::InternalError(format!("Failed to save: {}", e)))?;
+
+    Ok(Json(updated_group))
+}
+
+async fn delete_group(
+    State(state): State<SharedState>,
+    Path(id): Path<usize>,
+) -> Result<Json<serde_json::Value>, AppError> {
+    let mut app_data = state.write()
+        .map_err(|e| AppError::InternalError(format!("Failed to acquire lock: {}", e)))?;
+
+    // Prevent deleting if it's the only group
+    if app_data.groups.len() == 1 {
+        return Err(AppError::BadRequest("Cannot delete the last group".to_string()));
+    }
+
+    // Prevent deleting the current group
+    if app_data.current_group_id == id {
+        return Err(AppError::BadRequest("Cannot delete the current group. Switch to another group first.".to_string()));
+    }
+
+    let index = app_data.groups.iter().position(|g| g.id == id)
+        .ok_or_else(|| AppError::NotFound(format!("Group with id {} not found", id)))?;
+
+    app_data.groups.remove(index);
+
+    let app_data_clone = app_data.clone();
+    drop(app_data);
+
+    save_app_data(&app_data_clone)
+        .map_err(|e| AppError::InternalError(format!("Failed to save: {}", e)))?;
+
+    Ok(Json(serde_json::json!({ "success": true })))
 }
 
 async fn create_user(
@@ -353,6 +421,7 @@ async fn create_expense(
         participants: participant_users,
         created_at: chrono::Utc::now().to_rfc3339(),
         category: payload.category,
+        notes: payload.notes,
     };
 
     add_expense(expense.clone(), group);

@@ -25,6 +25,8 @@ pub struct Expense {
     pub created_at: String,
     #[serde(default)]
     pub category: Option<String>,
+    #[serde(default)]
+    pub notes: Option<String>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]

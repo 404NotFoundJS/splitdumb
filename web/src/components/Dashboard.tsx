@@ -130,6 +130,11 @@ const Dashboard: React.FC<DashboardProps> = ({ refresh, onRefresh }) => {
                                                 {dateStr} • Paid by <span className="expense-payer">{expense.payer.name}</span> •
                                                 Split between {expense.participants.map(p => p.name).join(', ')}
                                             </div>
+                                            {expense.notes && (
+                                                <div className="expense-notes">
+                                                    📝 {expense.notes}
+                                                </div>
+                                            )}
                                         </div>
                                         <div className="expense-actions">
                                             <button

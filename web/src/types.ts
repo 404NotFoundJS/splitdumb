@@ -11,6 +11,7 @@ export type Expense = {
     participants: User[];
     created_at: string;
     category?: string;
+    notes?: string;
 };
 
 export type Group = {

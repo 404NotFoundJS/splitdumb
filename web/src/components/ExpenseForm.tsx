@@ -13,6 +13,7 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({ onExpenseAdded, refresh }) =>
     const [payer, setPayer] = useState('');
     const [participants, setParticipants] = useState<string[]>([]);
     const [category, setCategory] = useState('');
+    const [notes, setNotes] = useState('');
     const [users, setUsers] = useState<Types.User[]>([]);
     const [error, setError] = useState<string | null>(null);
 
@@ -53,11 +54,12 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({ onExpenseAdded, refresh }) =>
 
         setError(null);
         try {
-            await createExpense(description, amount, payer, participants, category || undefined);
+            await createExpense(description, amount, payer, participants, category || undefined, notes || undefined);
             setDescription('');
             setAmount(0);
             setParticipants([]);
             setCategory('');
+            setNotes('');
             onExpenseAdded();
         } catch (err: any) {
             setError(err.response?.data?.error || 'Failed to add expense');
@@ -131,6 +133,17 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({ onExpenseAdded, refresh }) =>
                                 </option>
                             ))}
                         </select>
+                    </div>
+                    <div className="form-group">
+                        <label htmlFor="expenseNotes" className="form-label">Notes (Optional)</label>
+                        <textarea
+                            id="expenseNotes"
+                            className="form-control"
+                            placeholder="Add any additional details..."
+                            rows={3}
+                            value={notes}
+                            onChange={(e) => setNotes(e.target.value)}
+                        />
                     </div>
                     <div className="form-group">
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
