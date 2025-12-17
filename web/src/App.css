@@ -1,0 +1,259 @@
+/* App Layout */
+.app-header {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: white;
+  padding: 2rem 0;
+  margin-bottom: 3rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.app-title {
+  font-size: 2.5rem;
+  font-weight: 800;
+  margin: 0;
+  letter-spacing: -0.025em;
+}
+
+.app-subtitle {
+  font-size: 1rem;
+  opacity: 0.9;
+  margin-top: 0.5rem;
+  font-weight: 400;
+}
+
+.app-container {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 1.5rem 3rem;
+}
+
+/* Dashboard Specific */
+.dashboard-card {
+  /* Disable hover animation and transitions on main dashboard card */
+  transition: box-shadow 0.2s ease;
+  padding: 0;
+}
+
+.dashboard-card:hover {
+  transform: none;
+  box-shadow: var(--shadow-md);
+}
+
+.dashboard-group-header {
+  background: linear-gradient(135deg, #f8fafc 0%, #e0f2fe 100%);
+  padding: 1.5rem;
+  border-bottom: 2px solid #bfdbfe;
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+}
+
+.dashboard-group-name {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #1e40af;
+  margin: 0;
+}
+
+/* Settlement Card - Priority Highlight */
+.settlement-card {
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+  border-left: 4px solid #3b82f6;
+}
+
+.settlement-item {
+  padding: 1rem;
+  background: white;
+  border-radius: var(--radius-md);
+  margin-bottom: 0.75rem;
+  border: 1px solid #e0f2fe;
+  transition: all 0.2s ease;
+}
+
+.settlement-item:last-child {
+  margin-bottom: 0;
+}
+
+.settlement-item:hover {
+  border-color: #3b82f6;
+  box-shadow: 0 2px 4px rgba(59, 130, 246, 0.1);
+}
+
+.settlement-amount {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #3b82f6;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 2rem 1rem;
+  color: var(--color-text-muted);
+}
+
+.empty-state-icon {
+  font-size: 3rem;
+  margin-bottom: 0.5rem;
+  opacity: 0.3;
+}
+
+/* Balance Display */
+.balance-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.25rem;
+}
+
+.balance-name {
+  font-weight: 500;
+  font-size: 1rem;
+}
+
+.balance-amount {
+  font-size: 1.125rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Expense Item */
+.expense-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.25rem;
+  gap: 1rem;
+}
+
+.expense-content {
+  flex: 1;
+}
+
+.expense-title {
+  font-weight: 600;
+  font-size: 1rem;
+  margin-bottom: 0.25rem;
+  color: var(--color-text);
+}
+
+.expense-amount {
+  font-weight: 700;
+  color: #3b82f6;
+}
+
+.expense-details {
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+  margin-top: 0.25rem;
+}
+
+.expense-payer {
+  font-weight: 500;
+  color: var(--color-text);
+}
+
+.expense-category {
+  display: inline-block;
+  margin-left: 0.5rem;
+  padding: 0.125rem 0.5rem;
+  background-color: #dbeafe;
+  color: #1e40af;
+  border-radius: var(--radius-sm);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.expense-actions {
+  flex-shrink: 0;
+}
+
+/* Form Cards */
+.form-card {
+  margin-bottom: 1.5rem;
+}
+
+.form-card .card-title {
+  color: var(--color-text);
+  border-bottom: 2px solid #e2e8f0;
+  padding-bottom: 0.75rem;
+}
+
+.form-group {
+  margin-bottom: 1.25rem;
+}
+
+.form-group:last-child {
+  margin-bottom: 0;
+}
+
+/* Participant Checkboxes */
+.participants-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem;
+  background-color: #f8fafc;
+  border-radius: var(--radius-md);
+  border: 1px solid #e2e8f0;
+}
+
+.form-check {
+  display: flex;
+  align-items: center;
+  margin: 0;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .app-header {
+    padding: 1.5rem 0;
+    margin-bottom: 2rem;
+  }
+
+  .app-title {
+    font-size: 2rem;
+  }
+
+  .app-container {
+    padding: 0 1rem 2rem;
+  }
+
+  .card-body {
+    padding: 1.25rem;
+  }
+
+  .expense-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+
+  .expense-actions {
+    width: 100%;
+  }
+
+  .expense-actions .btn {
+    width: 100%;
+  }
+}
+
+/* Loading State */
+.loading-state {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: var(--color-text-muted);
+}
+
+.loading-spinner {
+  display: inline-block;
+  width: 2rem;
+  height: 2rem;
+  border: 3px solid #e2e8f0;
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
