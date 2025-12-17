@@ -123,56 +123,67 @@ function App() {
                 flexWrap: "wrap",
               }}
             >
-              <select
-                className="form-select"
-                style={{ width: "200px" }}
-                value={currentGroupId}
-                onChange={(e) => handleSwitchGroup(Number(e.target.value))}
-              >
-                {groups.map((group) => (
-                  <option key={group.id} value={group.id}>
-                    {group.name}
-                  </option>
-                ))}
-              </select>
-              <button
-                className="btn btn-primary"
-                onClick={() => setShowCreateGroup(!showCreateGroup)}
-              >
-                + New Group
-              </button>
+              {showCreateGroup ? (
+                <>
+                  <input
+                    type="text"
+                    className="form-control"
+                    placeholder="New group name..."
+                    value={newGroupName}
+                    onChange={(e) => setNewGroupName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        handleCreateGroup(e);
+                      }
+                      if (e.key === "Escape") {
+                        setShowCreateGroup(false);
+                        setNewGroupName("");
+                      }
+                    }}
+                    autoFocus
+                    style={{ width: "200px" }}
+                  />
+                  <button
+                    className="btn btn-sm btn-success"
+                    onClick={handleCreateGroup}
+                  >
+                    💾 Create
+                  </button>
+                  <button
+                    className="btn btn-sm btn-secondary"
+                    onClick={() => {
+                      setShowCreateGroup(false);
+                      setNewGroupName("");
+                    }}
+                  >
+                    ✖️ Cancel
+                  </button>
+                </>
+              ) : (
+                <>
+                  <select
+                    className="form-select"
+                    style={{ width: "200px" }}
+                    value={currentGroupId}
+                    onChange={(e) => handleSwitchGroup(Number(e.target.value))}
+                  >
+                    {groups.map((group) => (
+                      <option key={group.id} value={group.id}>
+                        {group.name}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    className="btn btn-sm btn-primary"
+                    onClick={() => setShowCreateGroup(true)}
+                  >
+                    + New
+                  </button>
+                </>
+              )}
             </div>
           </div>
-          {showCreateGroup && (
-            <div style={{ marginTop: "1rem" }}>
-              <form
-                onSubmit={handleCreateGroup}
-                style={{ display: "flex", gap: "0.5rem" }}
-              >
-                <input
-                  type="text"
-                  className="form-control"
-                  placeholder="Group name"
-                  value={newGroupName}
-                  onChange={(e) => setNewGroupName(e.target.value)}
-                  style={{ maxWidth: "250px" }}
-                />
-                <button type="submit" className="btn btn-success">
-                  Create
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  onClick={() => {
-                    setShowCreateGroup(false);
-                    setNewGroupName("");
-                  }}
-                >
-                  Cancel
-                </button>
-              </form>
-            </div>
-          )}
         </div>
       </header>
 
