@@ -19,6 +19,7 @@ export type Group = {
   name: string;
   members: User[];
   expenses: Expense[];
+  simplify_debts: boolean;
 };
 
 export type Settlement = {

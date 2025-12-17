@@ -51,6 +51,7 @@ fn create_default() -> AppData {
             },
         ],
         expenses: vec![],
+        simplify_debts: false,
     };
 
     let app_data = AppData {

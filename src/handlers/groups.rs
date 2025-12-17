@@ -75,6 +75,7 @@ pub async fn create_group(
         name: name.to_string(),
         members: vec![],
         expenses: vec![],
+        simplify_debts: false,
     };
 
     app_data.groups.push(group.clone());
@@ -206,22 +207,34 @@ pub async fn get_settlements(
         .find(|g| g.id == current_id)
         .ok_or_else(|| AppError::NotFound("Current group not found".to_string()))?;
 
-    let settlements = calculate_settlements(group);
+    // Use group's simplify_debts setting to determine which algorithm to use
+    let settlements = if group.simplify_debts {
+        calculate_simplified_settlements(group)
+    } else {
+        calculate_settlements(group)
+    };
     Ok(Json(SettlementsResponse { settlements }))
 }
 
-pub async fn get_simplified_settlements(
+pub async fn toggle_simplify(
     State(state): State<SharedState>,
-) -> AppResult<Json<SettlementsResponse>> {
-    let app_data = state.read().map_err(|_| AppError::LockError)?;
+) -> AppResult<Json<serde_json::Value>> {
+    let mut app_data = state.write().map_err(|_| AppError::LockError)?;
 
     let current_id = app_data.current_group_id;
     let group = app_data
         .groups
-        .iter()
+        .iter_mut()
         .find(|g| g.id == current_id)
         .ok_or_else(|| AppError::NotFound("Current group not found".to_string()))?;
 
-    let settlements = calculate_simplified_settlements(group);
-    Ok(Json(SettlementsResponse { settlements }))
+    group.simplify_debts = !group.simplify_debts;
+    let new_value = group.simplify_debts;
+
+    let app_data_clone = app_data.clone();
+    drop(app_data);
+
+    storage::save(&app_data_clone)?;
+
+    Ok(Json(serde_json::json!({ "simplify_debts": new_value })))
 }

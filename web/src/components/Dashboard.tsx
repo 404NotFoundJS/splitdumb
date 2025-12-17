@@ -3,7 +3,7 @@ import {
   getGroup,
   getBalances,
   getSettlements,
-  getSimplifiedSettlements,
+  toggleSimplify,
   deleteExpense,
   deleteUser,
   settle,
@@ -35,19 +35,15 @@ const Dashboard: React.FC<DashboardProps> = ({
   const [group, setGroup] = useState<Types.Group | null>(null);
   const [balances, setBalances] = useState<Record<string, number>>({});
   const [settlements, setSettlements] = useState<Types.Settlement[]>([]);
-  const [isSimplified, setIsSimplified] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const fetchGroupData = useCallback(async () => {
     setError(null);
     try {
-      const settlementsFunc = isSimplified
-        ? getSimplifiedSettlements
-        : getSettlements;
       const [groupData, balancesData, settlementsData] = await Promise.all([
         getGroup(),
         getBalances(),
-        settlementsFunc(),
+        getSettlements(),
       ]);
       setGroup(groupData);
       setBalances(balancesData.balances);
@@ -59,15 +55,23 @@ const Dashboard: React.FC<DashboardProps> = ({
       toast.error(errorMsg);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isSimplified]);
+  }, []);
 
   useEffect(() => {
     fetchGroupData();
   }, [refreshKey, fetchGroupData]);
 
-  const handleToggleSimplify = useCallback(() => {
-    setIsSimplified((prev) => !prev);
-  }, []);
+  const handleToggleSimplify = useCallback(async () => {
+    try {
+      await toggleSimplify();
+      onRefresh(); // Refresh to get updated settlements
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : "Failed to toggle simplify",
+      );
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [onRefresh]);
 
   const handleDeleteExpense = async (
     expenseId: number,
@@ -188,7 +192,7 @@ const Dashboard: React.FC<DashboardProps> = ({
           <SettlementCard
             settlements={settlements}
             onSettle={handleSettle}
-            isSimplified={isSimplified}
+            isSimplified={group.simplify_debts}
             onToggleSimplify={handleToggleSimplify}
           />
         </div>

@@ -41,22 +41,29 @@ mod tests {
         }
     }
 
+    fn create_group(members: Vec<User>, expenses: Vec<Expense>) -> Group {
+        Group {
+            id: 1,
+            name: "Test Group".to_string(),
+            members,
+            expenses,
+            simplify_debts: false,
+        }
+    }
+
     #[test]
     fn test_calculate_balances_simple() {
         let (alice, bob, _) = create_test_users();
-
-        let group = Group {
-            id: 1,
-            name: "Test Group".to_string(),
-            members: vec![alice.clone(), bob.clone()],
-            expenses: vec![create_expense(
+        let group = create_group(
+            vec![alice.clone(), bob.clone()],
+            vec![create_expense(
                 1,
                 "Dinner",
                 50.0,
                 alice.clone(),
                 vec![alice.clone(), bob.clone()],
             )],
-        };
+        );
 
         let balances = calculate_balances(&group);
         assert_eq!(balances["Alice"], 25.0);
@@ -66,12 +73,9 @@ mod tests {
     #[test]
     fn test_calculate_balances_multiple_expenses() {
         let (alice, bob, _) = create_test_users();
-
-        let group = Group {
-            id: 1,
-            name: "Test Group".to_string(),
-            members: vec![alice.clone(), bob.clone()],
-            expenses: vec![
+        let group = create_group(
+            vec![alice.clone(), bob.clone()],
+            vec![
                 create_expense(
                     1,
                     "Dinner",
@@ -87,7 +91,7 @@ mod tests {
                     vec![alice.clone(), bob.clone()],
                 ),
             ],
-        };
+        );
 
         let balances = calculate_balances(&group);
         assert_eq!(balances["Alice"], 10.0);
@@ -97,13 +101,7 @@ mod tests {
     #[test]
     fn test_calculate_balances_no_expenses() {
         let (alice, bob, _) = create_test_users();
-
-        let group = Group {
-            id: 1,
-            name: "Test Group".to_string(),
-            members: vec![alice.clone(), bob.clone()],
-            expenses: vec![],
-        };
+        let group = create_group(vec![alice.clone(), bob.clone()], vec![]);
 
         let balances = calculate_balances(&group);
         assert_eq!(balances["Alice"], 0.0);
@@ -113,19 +111,16 @@ mod tests {
     #[test]
     fn test_calculate_balances_three_people() {
         let (alice, bob, charlie) = create_test_users();
-
-        let group = Group {
-            id: 1,
-            name: "Test Group".to_string(),
-            members: vec![alice.clone(), bob.clone(), charlie.clone()],
-            expenses: vec![create_expense(
+        let group = create_group(
+            vec![alice.clone(), bob.clone(), charlie.clone()],
+            vec![create_expense(
                 1,
                 "Dinner",
                 90.0,
                 alice.clone(),
                 vec![alice.clone(), bob.clone(), charlie.clone()],
             )],
-        };
+        );
 
         let balances = calculate_balances(&group);
         assert_eq!(balances["Alice"], 60.0);
@@ -136,19 +131,16 @@ mod tests {
     #[test]
     fn test_calculate_balances_partial_split() {
         let (alice, bob, charlie) = create_test_users();
-
-        let group = Group {
-            id: 1,
-            name: "Test Group".to_string(),
-            members: vec![alice.clone(), bob.clone(), charlie.clone()],
-            expenses: vec![create_expense(
+        let group = create_group(
+            vec![alice.clone(), bob.clone(), charlie.clone()],
+            vec![create_expense(
                 1,
                 "Movie",
                 40.0,
                 alice.clone(),
                 vec![alice.clone(), bob.clone()],
             )],
-        };
+        );
 
         let balances = calculate_balances(&group);
         assert_eq!(balances["Alice"], 20.0);
@@ -159,19 +151,16 @@ mod tests {
     #[test]
     fn test_settlements_simple() {
         let (alice, bob, _) = create_test_users();
-
-        let group = Group {
-            id: 1,
-            name: "Test Group".to_string(),
-            members: vec![alice.clone(), bob.clone()],
-            expenses: vec![create_expense(
+        let group = create_group(
+            vec![alice.clone(), bob.clone()],
+            vec![create_expense(
                 1,
                 "Dinner",
                 50.0,
                 alice.clone(),
                 vec![alice.clone(), bob.clone()],
             )],
-        };
+        );
 
         let settlements = calculate_settlements(&group);
         assert_eq!(settlements.len(), 1);
@@ -183,13 +172,7 @@ mod tests {
     #[test]
     fn test_settlements_all_settled() {
         let (alice, bob, _) = create_test_users();
-
-        let group = Group {
-            id: 1,
-            name: "Test Group".to_string(),
-            members: vec![alice.clone(), bob.clone()],
-            expenses: vec![],
-        };
+        let group = create_group(vec![alice.clone(), bob.clone()], vec![]);
 
         let settlements = calculate_settlements(&group);
         assert!(settlements.is_empty());
@@ -198,19 +181,16 @@ mod tests {
     #[test]
     fn test_settlements_three_people() {
         let (alice, bob, charlie) = create_test_users();
-
-        let group = Group {
-            id: 1,
-            name: "Test Group".to_string(),
-            members: vec![alice.clone(), bob.clone(), charlie.clone()],
-            expenses: vec![create_expense(
+        let group = create_group(
+            vec![alice.clone(), bob.clone(), charlie.clone()],
+            vec![create_expense(
                 1,
                 "Dinner",
                 90.0,
                 alice.clone(),
                 vec![alice.clone(), bob.clone(), charlie.clone()],
             )],
-        };
+        );
 
         let settlements = calculate_settlements(&group);
         assert_eq!(settlements.len(), 2);
@@ -226,12 +206,9 @@ mod tests {
     #[test]
     fn test_settlements_complex_scenario() {
         let (alice, bob, charlie) = create_test_users();
-
-        let group = Group {
-            id: 1,
-            name: "Test Group".to_string(),
-            members: vec![alice.clone(), bob.clone(), charlie.clone()],
-            expenses: vec![
+        let group = create_group(
+            vec![alice.clone(), bob.clone(), charlie.clone()],
+            vec![
                 create_expense(
                     1,
                     "Dinner",
@@ -247,7 +224,7 @@ mod tests {
                     vec![alice.clone(), bob.clone(), charlie.clone()],
                 ),
             ],
-        };
+        );
 
         // Use simplified settlements for total balance check
         let settlements = calculate_simplified_settlements(&group);
@@ -262,14 +239,10 @@ mod tests {
 
     #[test]
     fn test_pairwise_settlements_stability() {
-        // Test that pairwise settlements are stable - each pair is independent
         let (alice, bob, charlie) = create_test_users();
-
-        let group = Group {
-            id: 1,
-            name: "Test Group".to_string(),
-            members: vec![alice.clone(), bob.clone(), charlie.clone()],
-            expenses: vec![
+        let group = create_group(
+            vec![alice.clone(), bob.clone(), charlie.clone()],
+            vec![
                 create_expense(
                     1,
                     "Dinner",
@@ -285,7 +258,7 @@ mod tests {
                     vec![alice.clone(), bob.clone(), charlie.clone()],
                 ),
             ],
-        };
+        );
 
         let settlements = calculate_settlements(&group);
 
@@ -293,11 +266,8 @@ mod tests {
         // Dinner: Bob owes Alice $30, Charlie owes Alice $30
         // Taxi: Alice owes Bob $10, Charlie owes Bob $10
         // Net: Bob owes Alice $20, Charlie owes Alice $30, Charlie owes Bob $10
-
-        // Verify we have exactly 3 settlements (one per pair with debt)
         assert_eq!(settlements.len(), 3);
 
-        // Verify each settlement is correct
         let bob_to_alice = settlements
             .iter()
             .find(|s| s.from == "Bob" && s.to == "Alice");
@@ -320,15 +290,10 @@ mod tests {
 
     #[test]
     fn test_pairwise_settlements_after_settle() {
-        // Test that settling one debt doesn't affect other settlements
         let (alice, bob, charlie) = create_test_users();
-
-        let group = Group {
-            id: 1,
-            name: "Test Group".to_string(),
-            members: vec![alice.clone(), bob.clone(), charlie.clone()],
-            expenses: vec![
-                // Original expenses
+        let group = create_group(
+            vec![alice.clone(), bob.clone(), charlie.clone()],
+            vec![
                 create_expense(
                     1,
                     "Dinner",
@@ -344,23 +309,11 @@ mod tests {
                     vec![alice.clone(), bob.clone(), charlie.clone()],
                 ),
                 // Bob settles his debt to Alice ($20)
-                // This creates an expense where Bob pays and only Alice participates
                 create_expense(3, "Bob paid Alice", 20.0, bob.clone(), vec![alice.clone()]),
             ],
-        };
+        );
 
         let settlements = calculate_settlements(&group);
-
-        // After Bob settles with Alice:
-        // - Bob owes Alice: $30 (dinner) - $10 (taxi offset) = $20, minus $20 (settlement) = $0
-        // - Charlie owes Alice: $30 (dinner) - $10 (taxi offset) = $20... wait that's not right
-        // Let me recalculate:
-        // Dinner: Bob owes Alice $30, Charlie owes Alice $30
-        // Taxi: Alice owes Bob $10, Charlie owes Bob $10
-        // Settlement: Alice owes Bob $20
-        // Net Bob↔Alice: Bob owes $30, Alice owes $30 (10+20) = 0
-        // Net Charlie↔Alice: Charlie owes $30
-        // Net Charlie↔Bob: Charlie owes $10
 
         // Verify Bob no longer owes Alice
         let bob_to_alice = settlements
@@ -391,26 +344,22 @@ mod tests {
             "Charlie→Bob should still be $10"
         );
 
-        // Verify only 2 settlements remain (Charlie→Alice and Charlie→Bob)
         assert_eq!(settlements.len(), 2, "Should have exactly 2 settlements");
     }
 
     #[test]
     fn test_balances_with_decimal_amounts() {
         let (alice, bob, _) = create_test_users();
-
-        let group = Group {
-            id: 1,
-            name: "Test Group".to_string(),
-            members: vec![alice.clone(), bob.clone()],
-            expenses: vec![create_expense(
+        let group = create_group(
+            vec![alice.clone(), bob.clone()],
+            vec![create_expense(
                 1,
                 "Coffee",
                 7.50,
                 alice.clone(),
                 vec![alice.clone(), bob.clone()],
             )],
-        };
+        );
 
         let balances = calculate_balances(&group);
         assert_eq!(balances["Alice"], 3.75);

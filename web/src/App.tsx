@@ -64,6 +64,7 @@ function App() {
       name: newGroupName,
       members: [],
       expenses: [],
+      simplify_debts: false,
     };
 
     setGroups([...groups, tempGroup]);

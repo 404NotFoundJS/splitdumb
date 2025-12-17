@@ -6,12 +6,18 @@ pub struct User {
     pub name: String,
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct Group {
+    #[serde(default)]
     pub id: usize,
+    #[serde(default)]
     pub name: String,
+    #[serde(default)]
     pub members: Vec<User>,
+    #[serde(default)]
     pub expenses: Vec<Expense>,
+    #[serde(default)]
+    pub simplify_debts: bool,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]

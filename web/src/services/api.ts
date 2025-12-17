@@ -41,8 +41,8 @@ export const getSettlements = async () => {
   return response.data;
 };
 
-export const getSimplifiedSettlements = async () => {
-  const response = await api.get("/settlements/simplified");
+export const toggleSimplify = async () => {
+  const response = await api.post("/simplify");
   return response.data;
 };
 
