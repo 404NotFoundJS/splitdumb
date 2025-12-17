@@ -4,6 +4,7 @@ import React, {
   useState,
   useCallback,
   useRef,
+  useMemo,
 } from "react";
 
 export type ToastType = "success" | "error" | "info" | "warning";
@@ -119,21 +120,36 @@ export const ToastProvider: React.FC<{ children: React.ReactNode }> = ({
     setToasts((prev) => [...prev, toast]);
   }, []);
 
+  // Memoize context value to prevent unnecessary re-renders
+  const contextValue = useMemo(
+    () => ({
+      toasts,
+      addToast,
+      removeToast,
+      success,
+      error,
+      info,
+      warning,
+      confirm,
+      handleConfirm,
+      handleCancel,
+    }),
+    [
+      toasts,
+      addToast,
+      removeToast,
+      success,
+      error,
+      info,
+      warning,
+      confirm,
+      handleConfirm,
+      handleCancel,
+    ],
+  );
+
   return (
-    <ToastContext.Provider
-      value={{
-        toasts,
-        addToast,
-        removeToast,
-        success,
-        error,
-        info,
-        warning,
-        confirm,
-        handleConfirm,
-        handleCancel,
-      }}
-    >
+    <ToastContext.Provider value={contextValue}>
       {children}
     </ToastContext.Provider>
   );

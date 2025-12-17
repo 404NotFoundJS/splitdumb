@@ -58,10 +58,10 @@ const Dashboard: React.FC<DashboardProps> = ({
       setError(errorMsg);
       toast.error(errorMsg);
     }
-  }, [toast, isSimplified]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isSimplified]);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchGroupData();
   }, [refreshKey, fetchGroupData]);
 
