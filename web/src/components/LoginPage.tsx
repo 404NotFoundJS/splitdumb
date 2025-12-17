@@ -56,7 +56,7 @@ export default function LoginPage() {
           <input
             type="tel"
             className="form-control welcome-input"
-            placeholder="Phone number (XXX-XXXX-XXXX)"
+            placeholder="Phone number (XXX-XXX-XXXX)"
             value={phone}
             onChange={(e) => setPhone(formatPhoneNumber(e.target.value))}
             autoFocus

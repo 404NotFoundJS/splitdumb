@@ -132,7 +132,7 @@ async fn run_server(port: u16, data_file: &str) {
     tracing_subscriber::registry()
         .with(
             tracing_subscriber::EnvFilter::try_from_default_env()
-                .unwrap_or_else(|_| "splitwise_rust=debug,tower_http=debug".into()),
+                .unwrap_or_else(|_| "splitdumb=debug,tower_http=debug".into()),
         )
         .with(tracing_subscriber::fmt::layer())
         .init();

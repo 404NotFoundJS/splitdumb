@@ -42,7 +42,7 @@ const UserForm: React.FC<UserFormProps> = ({ onUserAdded }) => {
               id="userPhone"
               type="tel"
               className="form-control"
-              placeholder="XXX-XXXX-XXXX"
+              placeholder="XXX-XXX-XXXX"
               value={values.phone}
               onChange={(e) =>
                 handleChange("phone", formatPhoneNumber(e.target.value))

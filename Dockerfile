@@ -12,7 +12,7 @@ RUN apk add --no-cache musl-dev
 WORKDIR /app
 COPY Cargo.toml Cargo.lock ./
 RUN mkdir src && echo "fn main() {}" > src/main.rs
-RUN cargo build --release && rm -rf src target/release/deps/splitwise*
+RUN cargo build --release && rm -rf src target/release/deps/splitdumb*
 
 # Stage 3: Build backend binary
 FROM backend-deps AS backend-builder
