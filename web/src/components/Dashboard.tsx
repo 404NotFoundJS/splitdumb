@@ -1,13 +1,19 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import {
   getGroup,
   getBalances,
   getSettlements,
   deleteExpense,
   deleteUser,
+  settle,
 } from "../services/api";
 import * as Types from "../types";
 import { useToast } from "../contexts/ToastContext";
+import GroupHeader from "./GroupHeader";
+import SettlementCard from "./SettlementCard";
+import BalanceSummary from "./BalanceSummary";
+import ExpenseList from "./ExpenseList";
+import MemberList from "./MemberList";
 
 interface DashboardProps {
   refresh: boolean;
@@ -27,14 +33,8 @@ const Dashboard: React.FC<DashboardProps> = ({
   const [balances, setBalances] = useState<Record<string, number>>({});
   const [settlements, setSettlements] = useState<Types.Settlement[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [isEditing, setIsEditing] = useState(false);
-  const [editedName, setEditedName] = useState("");
 
-  useEffect(() => {
-    fetchGroupData();
-  }, [refresh]);
-
-  const fetchGroupData = async () => {
+  const fetchGroupData = useCallback(async () => {
     setError(null);
     try {
       const [groupData, balancesData, settlementsData] = await Promise.all([
@@ -45,13 +45,18 @@ const Dashboard: React.FC<DashboardProps> = ({
       setGroup(groupData);
       setBalances(balancesData.balances);
       setSettlements(settlementsData.settlements);
-    } catch (err: any) {
+    } catch (err) {
       const errorMsg =
-        err.response?.data?.error || err.message || "Unknown error occurred";
+        err instanceof Error ? err.message : "Unknown error occurred";
       setError(errorMsg);
       toast.error(errorMsg);
     }
-  };
+  }, [toast]);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchGroupData();
+  }, [refresh, fetchGroupData]);
 
   const handleDeleteExpense = async (
     expenseId: number,
@@ -70,9 +75,11 @@ const Dashboard: React.FC<DashboardProps> = ({
         await deleteExpense(expenseId);
         onRefresh();
         toast.success(`Expense "${description}" deleted successfully`);
-      } catch (err: any) {
+      } catch (err) {
         setGroup({ ...group, expenses: previousExpenses });
-        toast.error(err.response?.data?.error || "Failed to delete expense");
+        toast.error(
+          err instanceof Error ? err.message : "Failed to delete expense",
+        );
       }
     });
   };
@@ -93,36 +100,31 @@ const Dashboard: React.FC<DashboardProps> = ({
           await deleteUser(userId);
           onRefresh();
           toast.success(`${userName} removed from group successfully`);
-        } catch (err: any) {
+        } catch (err) {
           setGroup({ ...group, members: previousMembers });
-          toast.error(err.response?.data?.error || "Failed to remove user");
+          toast.error(
+            err instanceof Error ? err.message : "Failed to remove user",
+          );
         }
       },
     );
   };
 
-  const startEdit = () => {
-    if (group) {
-      setEditedName(group.name);
-      setIsEditing(true);
-    }
-  };
-
-  const cancelEdit = () => {
-    setIsEditing(false);
-    setEditedName("");
-  };
-
-  const saveEdit = async () => {
-    if (!group || !editedName.trim()) return;
-
-    try {
-      await onUpdateGroup(group.id, editedName);
-      setIsEditing(false);
-      setEditedName("");
-    } catch (error) {
-      setEditedName(group.name);
-    }
+  const handleSettle = async (from: string, to: string, amount: number) => {
+    toast.confirm(
+      `Mark ${from} as having paid ${to} $${amount.toFixed(2)}?`,
+      async () => {
+        try {
+          await settle(from, to, amount);
+          onRefresh();
+          toast.success(`Settlement recorded: ${from} paid ${to}`);
+        } catch (err) {
+          toast.error(
+            err instanceof Error ? err.message : "Failed to record settlement",
+          );
+        }
+      },
+    );
   };
 
   if (error) {
@@ -135,7 +137,7 @@ const Dashboard: React.FC<DashboardProps> = ({
     return (
       <div className="loading-state">
         <div className="loading-spinner"></div>
-        <p style={{ marginTop: "1rem" }}>Loading group data...</p>
+        <p>Loading group data...</p>
       </div>
     );
   }
@@ -143,209 +145,21 @@ const Dashboard: React.FC<DashboardProps> = ({
   return (
     <div>
       <div className="card dashboard-card">
-        <div className="dashboard-group-header">
-          {isEditing ? (
-            <div
-              style={{
-                display: "flex",
-                gap: "0.5rem",
-                alignItems: "center",
-                flexWrap: "wrap",
-              }}
-            >
-              <input
-                type="text"
-                className="form-control"
-                value={editedName}
-                onChange={(e) => setEditedName(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") saveEdit();
-                  if (e.key === "Escape") cancelEdit();
-                }}
-                autoFocus
-                style={{ flex: "1", minWidth: "200px" }}
-              />
-              <button className="btn btn-sm btn-success" onClick={saveEdit}>
-                💾 Save
-              </button>
-              <button className="btn btn-sm btn-secondary" onClick={cancelEdit}>
-                ✖️ Cancel
-              </button>
-            </div>
-          ) : (
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-              }}
-            >
-              <h3 className="dashboard-group-name">{group.name}</h3>
-              <div style={{ display: "flex", gap: "0.5rem" }}>
-                <button
-                  className="btn btn-sm btn-secondary"
-                  onClick={startEdit}
-                  title="Edit group name"
-                >
-                  ✏️ Edit
-                </button>
-                <button
-                  className="btn btn-sm btn-danger"
-                  onClick={onDeleteGroup}
-                  title="Delete group"
-                >
-                  🗑️ Delete
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-
-        <div className="card-body settlement-card">
-          <h5 className="card-title">💰 Who Pays Whom</h5>
-          {settlements.length > 0 ? (
-            <div>
-              {settlements.map((settlement, index) => (
-                <div key={index} className="settlement-item">
-                  <div>
-                    <strong>{settlement.from}</strong> pays{" "}
-                    <strong>{settlement.to}</strong>
-                  </div>
-                  <div className="settlement-amount">
-                    ${settlement.amount.toFixed(2)}
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="empty-state">
-              <div className="empty-state-icon">✓</div>
-              <p>All settled up!</p>
-            </div>
-          )}
-        </div>
+        <GroupHeader
+          groupName={group.name}
+          groupId={group.id}
+          onUpdateGroup={onUpdateGroup}
+          onDeleteGroup={onDeleteGroup}
+        />
+        <SettlementCard settlements={settlements} onSettle={handleSettle} />
       </div>
 
-      <div className="card dashboard-card mt-3">
-        <div className="card-body">
-          <h5 className="card-title">📊 Balance Summary</h5>
-          <div className="list-group">
-            {Object.entries(balances).map(([user, balance]) => (
-              <div key={user} className="balance-item list-group-item">
-                <span className="balance-name">{user}</span>
-                <span
-                  className={`balance-amount ${balance >= 0 ? "text-success" : "text-danger"}`}
-                >
-                  {balance >= 0 ? "+" : ""}${balance.toFixed(2)}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      <div className="card dashboard-card mt-3">
-        <div className="card-body">
-          <h5 className="card-title">📝 All Expenses</h5>
-          {group.expenses.length > 0 ? (
-            <div className="list-group">
-              {group.expenses.map((expense) => {
-                const date = new Date(expense.created_at);
-                const dateStr = date.toLocaleDateString("en-US", {
-                  month: "short",
-                  day: "numeric",
-                  year:
-                    date.getFullYear() !== new Date().getFullYear()
-                      ? "numeric"
-                      : undefined,
-                });
-
-                return (
-                  <div
-                    key={expense.id}
-                    className="expense-item list-group-item"
-                  >
-                    <div className="expense-content">
-                      <div className="expense-title">
-                        {expense.description}
-                        {expense.category && (
-                          <span className="expense-category">
-                            {expense.category}
-                          </span>
-                        )}
-                      </div>
-                      <div className="expense-amount">
-                        ${expense.amount.toFixed(2)}
-                      </div>
-                      <div className="expense-details">
-                        {dateStr} • Paid by{" "}
-                        <span className="expense-payer">
-                          {expense.payer.name}
-                        </span>{" "}
-                        • Split between{" "}
-                        {expense.participants.map((p) => p.name).join(", ")}
-                      </div>
-                      {expense.notes && (
-                        <div className="expense-notes">📝 {expense.notes}</div>
-                      )}
-                    </div>
-                    <div className="expense-actions">
-                      <button
-                        className="btn btn-sm btn-danger"
-                        onClick={() =>
-                          handleDeleteExpense(expense.id, expense.description)
-                        }
-                      >
-                        Delete
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <div className="empty-state">
-              <div className="empty-state-icon">📭</div>
-              <p>No expenses yet. Add one to get started!</p>
-            </div>
-          )}
-        </div>
-      </div>
-
-      <div className="card dashboard-card mt-3">
-        <div className="card-body">
-          <h5 className="card-title">👥 Group Members</h5>
-          {group.members.length > 0 ? (
-            <div className="list-group">
-              {group.members.map((user) => (
-                <div
-                  key={user.id}
-                  className="list-group-item"
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                  }}
-                >
-                  <span className="balance-name">{user.name}</span>
-                  <button
-                    className="btn btn-sm btn-danger"
-                    onClick={() => handleDeleteUser(user.id, user.name)}
-                    title="Remove user from group"
-                  >
-                    Remove
-                  </button>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="empty-state">
-              <div className="empty-state-icon">👤</div>
-              <p>No members yet. Add someone to get started!</p>
-            </div>
-          )}
-        </div>
-      </div>
+      <BalanceSummary balances={balances} />
+      <ExpenseList
+        expenses={group.expenses}
+        onDeleteExpense={handleDeleteExpense}
+      />
+      <MemberList members={group.members} onDeleteUser={handleDeleteUser} />
     </div>
   );
 };

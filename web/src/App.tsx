@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Dashboard from "./components/Dashboard";
 import UserForm from "./components/UserForm";
 import ExpenseForm from "./components/ExpenseForm";
@@ -21,18 +21,21 @@ function App() {
   const [showCreateGroup, setShowCreateGroup] = useState(false);
   const [newGroupName, setNewGroupName] = useState("");
 
-  useEffect(() => {
-    fetchGroups();
-  }, []);
-
-  const fetchGroups = async () => {
+  const fetchGroups = useCallback(async () => {
     try {
       const fetchedGroups = await listGroups();
       setGroups(fetchedGroups);
-    } catch (error: any) {
-      toast.error(error.response?.data?.error || "Failed to fetch groups");
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Failed to fetch groups",
+      );
     }
-  };
+  }, [toast]);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchGroups();
+  }, [fetchGroups]);
 
   const handleUpdate = () => {
     setRefreshDashboard(!refreshDashboard);
@@ -45,10 +48,12 @@ function App() {
 
     try {
       await switchGroup(groupId);
-    } catch (error: any) {
+    } catch (error) {
       setCurrentGroupId(previousGroupId);
       handleUpdate();
-      toast.error(error.response?.data?.error || "Failed to switch group");
+      toast.error(
+        error instanceof Error ? error.message : "Failed to switch group",
+      );
     }
   };
 
@@ -72,11 +77,13 @@ function App() {
       await fetchGroups();
       await handleSwitchGroup(newGroup.id);
       toast.success(`Group "${newGroup.name}" created successfully`);
-    } catch (error: any) {
+    } catch (error) {
       setGroups(groups.filter((g) => g.id !== tempGroup.id));
       setShowCreateGroup(true);
       setNewGroupName(tempGroup.name);
-      toast.error(error.response?.data?.error || "Failed to create group");
+      toast.error(
+        error instanceof Error ? error.message : "Failed to create group",
+      );
     }
   };
 
@@ -91,9 +98,11 @@ function App() {
       await fetchGroups();
       handleUpdate();
       toast.success("Group name updated successfully");
-    } catch (error: any) {
+    } catch (error) {
       setGroups(previousGroups);
-      toast.error(error.response?.data?.error || "Failed to update group");
+      toast.error(
+        error instanceof Error ? error.message : "Failed to update group",
+      );
       throw error;
     }
   };
@@ -119,79 +128,70 @@ function App() {
           await fetchGroups();
           handleUpdate();
           toast.success(`Group "${group.name}" deleted successfully`);
-        } catch (error: any) {
+        } catch (error) {
           setGroups(previousGroups);
           setCurrentGroupId(previousGroupId);
-          toast.error(error.response?.data?.error || "Failed to delete group");
+          toast.error(
+            error instanceof Error ? error.message : "Failed to delete group",
+          );
         }
       },
     );
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      handleCreateGroup(e);
+    }
+    if (e.key === "Escape") {
+      setShowCreateGroup(false);
+      setNewGroupName("");
+    }
+  };
+
+  const cancelCreateGroup = () => {
+    setShowCreateGroup(false);
+    setNewGroupName("");
   };
 
   return (
     <>
       <header className="app-header">
         <div className="container">
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-            }}
-          >
+          <div className="header-content">
             <div>
               <h1 className="app-title">Splitdumb</h1>
             </div>
-            <div
-              style={{
-                display: "flex",
-                gap: "0.5rem",
-                alignItems: "center",
-                flexWrap: "wrap",
-              }}
-            >
+            <div className="header-actions">
               {showCreateGroup ? (
                 <>
                   <input
                     type="text"
-                    className="form-control"
+                    className="form-control header-input"
                     placeholder="New group name..."
                     value={newGroupName}
                     onChange={(e) => setNewGroupName(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        handleCreateGroup(e);
-                      }
-                      if (e.key === "Escape") {
-                        setShowCreateGroup(false);
-                        setNewGroupName("");
-                      }
-                    }}
+                    onKeyDown={handleKeyDown}
                     autoFocus
-                    style={{ width: "200px" }}
                   />
                   <button
                     className="btn btn-sm btn-success"
                     onClick={handleCreateGroup}
                   >
-                    💾 Create
+                    Create
                   </button>
                   <button
                     className="btn btn-sm btn-secondary"
-                    onClick={() => {
-                      setShowCreateGroup(false);
-                      setNewGroupName("");
-                    }}
+                    onClick={cancelCreateGroup}
                   >
-                    ✖️ Cancel
+                    Cancel
                   </button>
                 </>
               ) : (
                 <>
                   <select
-                    className="form-select"
-                    style={{ width: "200px" }}
+                    className="form-select header-select"
                     value={currentGroupId}
                     onChange={(e) => handleSwitchGroup(Number(e.target.value))}
                   >

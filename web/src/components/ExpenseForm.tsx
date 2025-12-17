@@ -8,6 +8,15 @@ interface ExpenseFormProps {
   refresh: boolean;
 }
 
+const CATEGORIES = [
+  "Food",
+  "Transport",
+  "Entertainment",
+  "Accommodation",
+  "Shopping",
+  "Other",
+];
+
 const ExpenseForm: React.FC<ExpenseFormProps> = ({
   onExpenseAdded,
   refresh,
@@ -22,42 +31,39 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
   const [users, setUsers] = useState<Types.User[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const categories = [
-    "Food",
-    "Transport",
-    "Entertainment",
-    "Accommodation",
-    "Shopping",
-    "Other",
-  ];
-
   useEffect(() => {
     fetchUsers();
   }, [refresh]);
 
   const fetchUsers = async () => {
-    const group = await getGroup();
-    setUsers(group.members);
-    if (group.members.length > 0) {
-      setPayer(group.members[0].name);
+    try {
+      const group = await getGroup();
+      setUsers(group.members);
+      if (group.members.length > 0) {
+        setPayer(group.members[0].name);
+      }
+    } catch {
+      // Silently fail - errors will be shown elsewhere
     }
   };
 
-  const handleParticipantChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { value, checked } = e.target;
+  const handleParticipantToggle = (name: string, checked: boolean) => {
     if (checked) {
-      setParticipants([...participants, value]);
+      setParticipants([...participants, name]);
     } else {
-      setParticipants(participants.filter((p) => p !== value));
+      setParticipants(participants.filter((p) => p !== name));
     }
   };
 
-  const handleSelectAll = () => {
-    setParticipants(users.map((u) => u.name));
-  };
+  const handleSelectAll = () => setParticipants(users.map((u) => u.name));
+  const handleClearAll = () => setParticipants([]);
 
-  const handleClearAll = () => {
+  const resetForm = () => {
+    setDescription("");
+    setAmount(0);
     setParticipants([]);
+    setCategory("");
+    setNotes("");
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -68,8 +74,9 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
       !payer ||
       participants.length === 0 ||
       isSubmitting
-    )
+    ) {
       return;
+    }
 
     setIsSubmitting(true);
     const expenseData = {
@@ -80,12 +87,7 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
       category,
       notes,
     };
-
-    setDescription("");
-    setAmount(0);
-    setParticipants([]);
-    setCategory("");
-    setNotes("");
+    resetForm();
 
     try {
       await createExpense(
@@ -98,13 +100,14 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
       );
       onExpenseAdded();
       toast.success(`Expense "${expenseData.description}" added successfully`);
-    } catch (err: any) {
+    } catch (err) {
+      // Restore form on error
       setDescription(expenseData.description);
       setAmount(expenseData.amount);
       setParticipants(expenseData.participants);
       setCategory(expenseData.category);
       setNotes(expenseData.notes);
-      toast.error(err.response?.data?.error || "Failed to add expense");
+      toast.error(err instanceof Error ? err.message : "Failed to add expense");
     } finally {
       setIsSubmitting(false);
     }
@@ -113,7 +116,7 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
   return (
     <div className="card form-card">
       <div className="card-body">
-        <h5 className="card-title">💸 Add New Expense</h5>
+        <h5 className="card-title">Add New Expense</h5>
         <form onSubmit={handleSubmit}>
           <div className="form-group">
             <label htmlFor="expenseDescription" className="form-label">
@@ -130,6 +133,7 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
               required
             />
           </div>
+
           <div className="form-group">
             <label htmlFor="expenseAmount" className="form-label">
               Amount ($)
@@ -147,6 +151,7 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
               required
             />
           </div>
+
           <div className="form-group">
             <label htmlFor="expensePayer" className="form-label">
               Who Paid?
@@ -165,6 +170,7 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
               ))}
             </select>
           </div>
+
           <div className="form-group">
             <label htmlFor="expenseCategory" className="form-label">
               Category (Optional)
@@ -176,13 +182,14 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
               onChange={(e) => setCategory(e.target.value)}
             >
               <option value="">No category</option>
-              {categories.map((cat) => (
+              {CATEGORIES.map((cat) => (
                 <option key={cat} value={cat}>
                   {cat}
                 </option>
               ))}
             </select>
           </div>
+
           <div className="form-group">
             <label htmlFor="expenseNotes" className="form-label">
               Notes (Optional)
@@ -196,36 +203,22 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
               onChange={(e) => setNotes(e.target.value)}
             />
           </div>
+
           <div className="form-group">
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                marginBottom: "0.5rem",
-              }}
-            >
-              <label className="form-label" style={{ margin: 0 }}>
-                Split Between
-              </label>
+            <div className="form-actions-row">
+              <label className="form-label">Split Between</label>
               <div>
                 <button
                   type="button"
-                  className="btn btn-sm"
+                  className="btn btn-sm btn-inline"
                   onClick={handleSelectAll}
-                  style={{
-                    marginRight: "0.5rem",
-                    fontSize: "0.75rem",
-                    padding: "0.25rem 0.5rem",
-                  }}
                 >
                   Select All
                 </button>
                 <button
                   type="button"
-                  className="btn btn-sm"
+                  className="btn btn-sm btn-inline"
                   onClick={handleClearAll}
-                  style={{ fontSize: "0.75rem", padding: "0.25rem 0.5rem" }}
                 >
                   Clear
                 </button>
@@ -240,7 +233,9 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
                     type="checkbox"
                     value={user.name}
                     checked={participants.includes(user.name)}
-                    onChange={handleParticipantChange}
+                    onChange={(e) =>
+                      handleParticipantToggle(user.name, e.target.checked)
+                    }
                   />
                   <label
                     className="form-check-label"
@@ -252,6 +247,7 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
               ))}
             </div>
           </div>
+
           <button
             type="submit"
             className="btn btn-primary w-100"

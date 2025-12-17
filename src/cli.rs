@@ -1,7 +1,7 @@
 use clap::{Parser, Subcommand};
 
 #[derive(Parser)]
-#[clap(author, version, about, long_about = None)]
+#[clap(author, version, about = "Splitdumb - Expense sharing made simple")]
 pub struct Cli {
     #[clap(subcommand)]
     pub command: Commands,
@@ -9,6 +9,17 @@ pub struct Cli {
 
 #[derive(Subcommand)]
 pub enum Commands {
+    /// Starts the web server
+    Serve {
+        /// Port to listen on
+        #[clap(short, long, default_value = "3000")]
+        port: u16,
+
+        /// Path to the data file
+        #[clap(short, long, default_value = "app_data.json")]
+        data_file: String,
+    },
+
     /// Adds a new expense
     AddExpense {
         /// Description of the expense
@@ -20,15 +31,29 @@ pub enum Commands {
         amount: f64,
 
         /// Payer of the expense
-        #[clap(short, long)]
+        #[clap(short = 'P', long)]
         payer: String,
 
         /// Participants of the expense (comma-separated)
-        #[clap(short = 'P', long)]
+        #[clap(short = 'u', long)]
         participants: String,
+
+        /// Path to the data file
+        #[clap(long, default_value = "app_data.json")]
+        data_file: String,
     },
+
     /// Shows the balances of the group
-    ShowBalances,
-    /// Starts the web server
-    Serve,
+    ShowBalances {
+        /// Path to the data file
+        #[clap(long, default_value = "app_data.json")]
+        data_file: String,
+    },
+
+    /// Shows suggested settlements
+    ShowSettlements {
+        /// Path to the data file
+        #[clap(long, default_value = "app_data.json")]
+        data_file: String,
+    },
 }

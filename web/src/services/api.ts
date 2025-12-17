@@ -1,32 +1,44 @@
-import axios from "axios";
+import axios, { AxiosError } from "axios";
 
-const API_URL =
-  import.meta.env.MODE === "development"
-    ? "http://192.168.0.10:3000/api"
-    : "http://localhost:3000/api";
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000/api";
+
+const api = axios.create({
+  baseURL: API_URL,
+  timeout: 10000,
+});
+
+// Response interceptor for consistent error handling
+api.interceptors.response.use(
+  (response) => response,
+  (error: AxiosError<{ error: string }>) => {
+    const message =
+      error.response?.data?.error || error.message || "An error occurred";
+    return Promise.reject(new Error(message));
+  },
+);
 
 export const getGroup = async () => {
-  const response = await axios.get(`${API_URL}/group`);
+  const response = await api.get("/group");
   return response.data;
 };
 
 export const getBalances = async () => {
-  const response = await axios.get(`${API_URL}/balances`);
+  const response = await api.get("/balances");
   return response.data;
 };
 
 export const getSettlements = async () => {
-  const response = await axios.get(`${API_URL}/settlements`);
+  const response = await api.get("/settlements");
   return response.data;
 };
 
 export const createUser = async (name: string) => {
-  const response = await axios.post(`${API_URL}/users`, { name });
+  const response = await api.post("/users", { name });
   return response.data;
 };
 
 export const deleteUser = async (id: number) => {
-  const response = await axios.delete(`${API_URL}/users/${id}`);
+  const response = await api.delete(`/users/${id}`);
   return response.data;
 };
 
@@ -38,7 +50,7 @@ export const createExpense = async (
   category?: string,
   notes?: string,
 ) => {
-  const response = await axios.post(`${API_URL}/expenses`, {
+  const response = await api.post("/expenses", {
     description,
     amount,
     payer,
@@ -50,33 +62,40 @@ export const createExpense = async (
 };
 
 export const deleteExpense = async (id: number) => {
-  const response = await axios.delete(`${API_URL}/expenses/${id}`);
+  const response = await api.delete(`/expenses/${id}`);
+  return response.data;
+};
+
+export const settle = async (from: string, to: string, amount: number) => {
+  const response = await api.post("/settle", { from, to, amount });
   return response.data;
 };
 
 export const listGroups = async () => {
-  const response = await axios.get(`${API_URL}/groups`);
+  const response = await api.get("/groups");
   return response.data;
 };
 
 export const createGroup = async (name: string) => {
-  const response = await axios.post(`${API_URL}/groups`, { name });
+  const response = await api.post("/groups", { name });
   return response.data;
 };
 
 export const switchGroup = async (groupId: number) => {
-  const response = await axios.put(`${API_URL}/groups/current`, {
+  const response = await api.put("/groups/current", {
     group_id: groupId,
   });
   return response.data;
 };
 
 export const updateGroup = async (groupId: number, name: string) => {
-  const response = await axios.put(`${API_URL}/groups/${groupId}`, { name });
+  const response = await api.put(`/groups/${groupId}`, { name });
   return response.data;
 };
 
 export const deleteGroup = async (groupId: number) => {
-  const response = await axios.delete(`${API_URL}/groups/${groupId}`);
+  const response = await api.delete(`/groups/${groupId}`);
   return response.data;
 };
+
+export default api;
