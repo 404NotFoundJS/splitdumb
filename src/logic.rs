@@ -56,9 +56,9 @@ pub fn calculate_settlements(group: &Group) -> Vec<Settlement> {
         .map(|(name, balance)| (name.clone(), *balance))
         .collect();
 
-    // Sort for consistent results
-    debtors.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
-    creditors.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
+    // Sort for consistent results (by amount desc, then name asc for ties)
+    debtors.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap().then_with(|| a.0.cmp(&b.0)));
+    creditors.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap().then_with(|| a.0.cmp(&b.0)));
 
     // Match debtors with creditors
     let mut i = 0;
