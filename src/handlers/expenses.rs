@@ -151,14 +151,14 @@ pub async fn settle(
         .members
         .iter()
         .find(|u| u.name == payload.from)
-        .ok_or_else(|| AppError::NotFound(format!("User '{}' not found", payload.from)))?
+        .ok_or_else(|| AppError::BadRequest(format!("User '{}' not found", payload.from)))?
         .clone();
 
     let to_user = group
         .members
         .iter()
         .find(|u| u.name == payload.to)
-        .ok_or_else(|| AppError::NotFound(format!("User '{}' not found", payload.to)))?
+        .ok_or_else(|| AppError::BadRequest(format!("User '{}' not found", payload.to)))?
         .clone();
 
     let max_id = group.expenses.iter().map(|e| e.id).max().unwrap_or(0);
