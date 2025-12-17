@@ -115,24 +115,24 @@ pub async fn update_expense(
     Path(id): Path<usize>,
     Json(payload): Json<UpdateExpenseRequest>,
 ) -> AppResult<Json<Expense>> {
-    if let Some(amount) = payload.amount
-        && amount <= 0.0
-    {
-        return Err(AppError::BadRequest("Amount must be positive".to_string()));
+    if let Some(amount) = payload.amount {
+        if amount <= 0.0 {
+            return Err(AppError::BadRequest("Amount must be positive".to_string()));
+        }
     }
-    if let Some(ref desc) = payload.description
-        && desc.trim().is_empty()
-    {
-        return Err(AppError::BadRequest(
-            "Description cannot be empty".to_string(),
-        ));
+    if let Some(ref desc) = payload.description {
+        if desc.trim().is_empty() {
+            return Err(AppError::BadRequest(
+                "Description cannot be empty".to_string(),
+            ));
+        }
     }
-    if let Some(ref participants) = payload.participants
-        && participants.is_empty()
-    {
-        return Err(AppError::BadRequest(
-            "Must have at least one participant".to_string(),
-        ));
+    if let Some(ref participants) = payload.participants {
+        if participants.is_empty() {
+            return Err(AppError::BadRequest(
+                "Must have at least one participant".to_string(),
+            ));
+        }
     }
 
     let mut app_data = state.write().map_err(|_| AppError::LockError)?;

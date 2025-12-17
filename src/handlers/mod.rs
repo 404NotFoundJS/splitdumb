@@ -50,12 +50,13 @@ impl FromRequestParts<SharedState> for AuthUser {
             .ok_or((StatusCode::UNAUTHORIZED, "Invalid token"))?;
 
         // Check token expiry
-        if let Some(expires_at) = &user.token_expires_at
-            && let Ok(expires) = chrono::DateTime::parse_from_rfc3339(expires_at)
-            && chrono::Utc::now() > expires
-        {
-            warn!(user_id = user.id, "token expired");
-            return Err((StatusCode::UNAUTHORIZED, "Token expired"));
+        if let Some(expires_at) = &user.token_expires_at {
+            if let Ok(expires) = chrono::DateTime::parse_from_rfc3339(expires_at) {
+                if chrono::Utc::now() > expires {
+                    warn!(user_id = user.id, "token expired");
+                    return Err((StatusCode::UNAUTHORIZED, "Token expired"));
+                }
+            }
         }
 
         Ok(user)

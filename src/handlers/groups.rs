@@ -94,8 +94,10 @@ pub async fn create_group(
     let is_first_group = app_data.groups.is_empty();
     app_data.groups.push(group.clone());
 
-    if is_first_group && let Some(u) = app_data.users.iter_mut().find(|u| u.id == user.id) {
-        u.current_group_id = group.id;
+    if is_first_group {
+        if let Some(u) = app_data.users.iter_mut().find(|u| u.id == user.id) {
+            u.current_group_id = group.id;
+        }
     }
     storage::save(&app_data)?;
 
