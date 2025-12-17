@@ -1,9 +1,9 @@
 use axum::{
+    Json, Router,
     extract::{Path, State},
     http::StatusCode,
     response::{IntoResponse, Response},
     routing::{delete, get, post, put},
-    Json, Router,
 };
 use clap::Parser;
 use std::collections::HashMap;
@@ -138,7 +138,9 @@ async fn main() {
             participants,
         } => {
             // CLI Logic - work with current group
-            let group = app_data.groups.iter_mut()
+            let group = app_data
+                .groups
+                .iter_mut()
                 .find(|g| g.id == app_data.current_group_id)
                 .expect("Current group not found");
 
@@ -180,7 +182,9 @@ async fn main() {
             println!("Expense added successfully.");
         }
         Commands::ShowBalances => {
-            let group = app_data.groups.iter()
+            let group = app_data
+                .groups
+                .iter()
                 .find(|g| g.id == app_data.current_group_id)
                 .expect("Current group not found");
             let balances = calculate_balances(group);
@@ -193,11 +197,14 @@ async fn main() {
 }
 
 async fn get_current_group(State(state): State<SharedState>) -> Result<Json<Group>, AppError> {
-    let app_data = state.read()
+    let app_data = state
+        .read()
         .map_err(|e| AppError::InternalError(format!("Failed to acquire lock: {}", e)))?;
 
     let current_id = app_data.current_group_id;
-    let group = app_data.groups.iter()
+    let group = app_data
+        .groups
+        .iter()
         .find(|g| g.id == current_id)
         .ok_or_else(|| AppError::NotFound("Current group not found".to_string()))?;
 
@@ -205,7 +212,8 @@ async fn get_current_group(State(state): State<SharedState>) -> Result<Json<Grou
 }
 
 async fn list_groups(State(state): State<SharedState>) -> Result<Json<Vec<Group>>, AppError> {
-    let app_data = state.read()
+    let app_data = state
+        .read()
         .map_err(|e| AppError::InternalError(format!("Failed to acquire lock: {}", e)))?;
     Ok(Json(app_data.groups.clone()))
 }
@@ -216,10 +224,13 @@ async fn create_group(
 ) -> Result<Json<Group>, AppError> {
     let name = payload.name.trim();
     if name.is_empty() {
-        return Err(AppError::BadRequest("Group name cannot be empty".to_string()));
+        return Err(AppError::BadRequest(
+            "Group name cannot be empty".to_string(),
+        ));
     }
 
-    let mut app_data = state.write()
+    let mut app_data = state
+        .write()
         .map_err(|e| AppError::InternalError(format!("Failed to acquire lock: {}", e)))?;
 
     let max_id = app_data.groups.iter().map(|g| g.id).max().unwrap_or(0);
@@ -245,12 +256,16 @@ async fn switch_group(
     State(state): State<SharedState>,
     Json(payload): Json<SwitchGroupRequest>,
 ) -> Result<Json<serde_json::Value>, AppError> {
-    let mut app_data = state.write()
+    let mut app_data = state
+        .write()
         .map_err(|e| AppError::InternalError(format!("Failed to acquire lock: {}", e)))?;
 
     // Check if group exists
     if !app_data.groups.iter().any(|g| g.id == payload.group_id) {
-        return Err(AppError::NotFound(format!("Group with id {} not found", payload.group_id)));
+        return Err(AppError::NotFound(format!(
+            "Group with id {} not found",
+            payload.group_id
+        )));
     }
 
     app_data.current_group_id = payload.group_id;
@@ -261,7 +276,9 @@ async fn switch_group(
     save_app_data(&app_data_clone)
         .map_err(|e| AppError::InternalError(format!("Failed to save: {}", e)))?;
 
-    Ok(Json(serde_json::json!({ "success": true, "current_group_id": payload.group_id })))
+    Ok(Json(
+        serde_json::json!({ "success": true, "current_group_id": payload.group_id }),
+    ))
 }
 
 async fn update_group(
@@ -271,13 +288,18 @@ async fn update_group(
 ) -> Result<Json<Group>, AppError> {
     let name = payload.name.trim();
     if name.is_empty() {
-        return Err(AppError::BadRequest("Group name cannot be empty".to_string()));
+        return Err(AppError::BadRequest(
+            "Group name cannot be empty".to_string(),
+        ));
     }
 
-    let mut app_data = state.write()
+    let mut app_data = state
+        .write()
         .map_err(|e| AppError::InternalError(format!("Failed to acquire lock: {}", e)))?;
 
-    let group = app_data.groups.iter_mut()
+    let group = app_data
+        .groups
+        .iter_mut()
         .find(|g| g.id == id)
         .ok_or_else(|| AppError::NotFound(format!("Group with id {} not found", id)))?;
 
@@ -297,24 +319,30 @@ async fn delete_group(
     State(state): State<SharedState>,
     Path(id): Path<usize>,
 ) -> Result<Json<serde_json::Value>, AppError> {
-    let mut app_data = state.write()
+    let mut app_data = state
+        .write()
         .map_err(|e| AppError::InternalError(format!("Failed to acquire lock: {}", e)))?;
 
     // Prevent deleting if it's the only group
     if app_data.groups.len() == 1 {
-        return Err(AppError::BadRequest("Cannot delete the last group".to_string()));
+        return Err(AppError::BadRequest(
+            "Cannot delete the last group".to_string(),
+        ));
     }
 
     // If deleting the current group, switch to another group first
     if app_data.current_group_id == id {
         // Find another group to switch to
-        let new_group = app_data.groups.iter()
-            .find(|g| g.id != id)
-            .ok_or_else(|| AppError::InternalError("No other group found to switch to".to_string()))?;
+        let new_group = app_data.groups.iter().find(|g| g.id != id).ok_or_else(|| {
+            AppError::InternalError("No other group found to switch to".to_string())
+        })?;
         app_data.current_group_id = new_group.id;
     }
 
-    let index = app_data.groups.iter().position(|g| g.id == id)
+    let index = app_data
+        .groups
+        .iter()
+        .position(|g| g.id == id)
         .ok_or_else(|| AppError::NotFound(format!("Group with id {} not found", id)))?;
 
     app_data.groups.remove(index);
@@ -325,7 +353,9 @@ async fn delete_group(
     save_app_data(&app_data_clone)
         .map_err(|e| AppError::InternalError(format!("Failed to save: {}", e)))?;
 
-    Ok(Json(serde_json::json!({ "success": true, "switched_group": app_data_clone.current_group_id })))
+    Ok(Json(
+        serde_json::json!({ "success": true, "switched_group": app_data_clone.current_group_id }),
+    ))
 }
 
 async fn create_user(
@@ -335,23 +365,33 @@ async fn create_user(
     // Validate input
     let name = payload.name.trim();
     if name.is_empty() {
-        return Err(AppError::BadRequest("User name cannot be empty".to_string()));
+        return Err(AppError::BadRequest(
+            "User name cannot be empty".to_string(),
+        ));
     }
     if name.len() > 100 {
-        return Err(AppError::BadRequest("User name too long (max 100 chars)".to_string()));
+        return Err(AppError::BadRequest(
+            "User name too long (max 100 chars)".to_string(),
+        ));
     }
 
-    let mut app_data = state.write()
+    let mut app_data = state
+        .write()
         .map_err(|e| AppError::InternalError(format!("Failed to acquire lock: {}", e)))?;
 
     let current_id = app_data.current_group_id;
-    let group = app_data.groups.iter_mut()
+    let group = app_data
+        .groups
+        .iter_mut()
         .find(|g| g.id == current_id)
         .ok_or_else(|| AppError::NotFound("Current group not found".to_string()))?;
 
     // Check for duplicate names
     if group.members.iter().any(|u| u.name == name) {
-        return Err(AppError::BadRequest(format!("User '{}' already exists", name)));
+        return Err(AppError::BadRequest(format!(
+            "User '{}' already exists",
+            name
+        )));
     }
 
     // Generate proper ID
@@ -380,20 +420,27 @@ async fn create_expense(
     // Validate input
     let description = payload.description.trim();
     if description.is_empty() {
-        return Err(AppError::BadRequest("Description cannot be empty".to_string()));
+        return Err(AppError::BadRequest(
+            "Description cannot be empty".to_string(),
+        ));
     }
     if payload.amount <= 0.0 {
         return Err(AppError::BadRequest("Amount must be positive".to_string()));
     }
     if payload.participants.is_empty() {
-        return Err(AppError::BadRequest("Must have at least one participant".to_string()));
+        return Err(AppError::BadRequest(
+            "Must have at least one participant".to_string(),
+        ));
     }
 
-    let mut app_data = state.write()
+    let mut app_data = state
+        .write()
         .map_err(|e| AppError::InternalError(format!("Failed to acquire lock: {}", e)))?;
 
     let current_id = app_data.current_group_id;
-    let group = app_data.groups.iter_mut()
+    let group = app_data
+        .groups
+        .iter_mut()
         .find(|g| g.id == current_id)
         .ok_or_else(|| AppError::NotFound("Current group not found".to_string()))?;
 
@@ -444,26 +491,33 @@ async fn delete_user(
     State(state): State<SharedState>,
     Path(id): Path<usize>,
 ) -> Result<Json<serde_json::Value>, AppError> {
-    let mut app_data = state.write()
+    let mut app_data = state
+        .write()
         .map_err(|e| AppError::InternalError(format!("Failed to acquire lock: {}", e)))?;
 
     let current_id = app_data.current_group_id;
-    let group = app_data.groups.iter_mut()
+    let group = app_data
+        .groups
+        .iter_mut()
         .find(|g| g.id == current_id)
         .ok_or_else(|| AppError::NotFound("Current group not found".to_string()))?;
 
-    let index = group.members.iter().position(|u| u.id == id)
+    let index = group
+        .members
+        .iter()
+        .position(|u| u.id == id)
         .ok_or_else(|| AppError::NotFound(format!("User with id {} not found", id)))?;
 
     // Check if user is involved in any expenses
     let user_name = &group.members[index].name;
-    let has_expenses = group.expenses.iter().any(|e| {
-        e.payer.name == *user_name || e.participants.iter().any(|p| p.name == *user_name)
-    });
+    let has_expenses = group
+        .expenses
+        .iter()
+        .any(|e| e.payer.name == *user_name || e.participants.iter().any(|p| p.name == *user_name));
 
     if has_expenses {
         return Err(AppError::BadRequest(
-            "Cannot delete user with existing expenses".to_string()
+            "Cannot delete user with existing expenses".to_string(),
         ));
     }
 
@@ -482,15 +536,21 @@ async fn delete_expense(
     State(state): State<SharedState>,
     Path(id): Path<usize>,
 ) -> Result<Json<serde_json::Value>, AppError> {
-    let mut app_data = state.write()
+    let mut app_data = state
+        .write()
         .map_err(|e| AppError::InternalError(format!("Failed to acquire lock: {}", e)))?;
 
     let current_id = app_data.current_group_id;
-    let group = app_data.groups.iter_mut()
+    let group = app_data
+        .groups
+        .iter_mut()
         .find(|g| g.id == current_id)
         .ok_or_else(|| AppError::NotFound("Current group not found".to_string()))?;
 
-    let index = group.expenses.iter().position(|e| e.id == id)
+    let index = group
+        .expenses
+        .iter()
+        .position(|e| e.id == id)
         .ok_or_else(|| AppError::NotFound(format!("Expense with id {} not found", id)))?;
 
     group.expenses.remove(index);
@@ -505,11 +565,14 @@ async fn delete_expense(
 }
 
 async fn get_balances(State(state): State<SharedState>) -> Result<Json<BalanceResponse>, AppError> {
-    let app_data = state.read()
+    let app_data = state
+        .read()
         .map_err(|e| AppError::InternalError(format!("Failed to acquire lock: {}", e)))?;
 
     let current_id = app_data.current_group_id;
-    let group = app_data.groups.iter()
+    let group = app_data
+        .groups
+        .iter()
         .find(|g| g.id == current_id)
         .ok_or_else(|| AppError::NotFound("Current group not found".to_string()))?;
 
@@ -517,12 +580,17 @@ async fn get_balances(State(state): State<SharedState>) -> Result<Json<BalanceRe
     Ok(Json(BalanceResponse { balances }))
 }
 
-async fn get_settlements(State(state): State<SharedState>) -> Result<Json<SettlementsResponse>, AppError> {
-    let app_data = state.read()
+async fn get_settlements(
+    State(state): State<SharedState>,
+) -> Result<Json<SettlementsResponse>, AppError> {
+    let app_data = state
+        .read()
         .map_err(|e| AppError::InternalError(format!("Failed to acquire lock: {}", e)))?;
 
     let current_id = app_data.current_group_id;
-    let group = app_data.groups.iter()
+    let group = app_data
+        .groups
+        .iter()
         .find(|g| g.id == current_id)
         .ok_or_else(|| AppError::NotFound("Current group not found".to_string()))?;
 

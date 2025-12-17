@@ -2,7 +2,13 @@ import { useState, useEffect } from "react";
 import Dashboard from "./components/Dashboard";
 import UserForm from "./components/UserForm";
 import ExpenseForm from "./components/ExpenseForm";
-import { listGroups, createGroup, switchGroup, updateGroup, deleteGroup } from "./services/api";
+import {
+  listGroups,
+  createGroup,
+  switchGroup,
+  updateGroup,
+  deleteGroup,
+} from "./services/api";
 import * as Types from "./types";
 import "./App.css";
 
@@ -68,10 +74,14 @@ function App() {
   };
 
   const handleDeleteGroup = async (groupId: number) => {
-    const group = groups.find(g => g.id === groupId);
+    const group = groups.find((g) => g.id === groupId);
     if (!group) return;
 
-    if (!confirm(`Are you sure you want to delete "${group.name}"? This will permanently delete all users and expenses in this group.`)) {
+    if (
+      !confirm(
+        `Are you sure you want to delete "${group.name}"? This will permanently delete all users and expenses in this group.`,
+      )
+    ) {
       return;
     }
 
@@ -95,11 +105,24 @@ function App() {
     <>
       <header className="app-header">
         <div className="container">
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
             <div>
               <h1 className="app-title">Splitdumb</h1>
             </div>
-            <div style={{ display: "flex", gap: "0.5rem", alignItems: "center", flexWrap: "wrap" }}>
+            <div
+              style={{
+                display: "flex",
+                gap: "0.5rem",
+                alignItems: "center",
+                flexWrap: "wrap",
+              }}
+            >
               <select
                 className="form-select"
                 style={{ width: "200px" }}
@@ -122,7 +145,10 @@ function App() {
           </div>
           {showCreateGroup && (
             <div style={{ marginTop: "1rem" }}>
-              <form onSubmit={handleCreateGroup} style={{ display: "flex", gap: "0.5rem" }}>
+              <form
+                onSubmit={handleCreateGroup}
+                style={{ display: "flex", gap: "0.5rem" }}
+              >
                 <input
                   type="text"
                   className="form-control"
@@ -154,7 +180,10 @@ function App() {
         <div className="row">
           <div className="col-md-6">
             <UserForm onUserAdded={handleUpdate} />
-            <ExpenseForm onExpenseAdded={handleUpdate} refresh={refreshDashboard} />
+            <ExpenseForm
+              onExpenseAdded={handleUpdate}
+              refresh={refreshDashboard}
+            />
           </div>
           <div className="col-md-6">
             <Dashboard
