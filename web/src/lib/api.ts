@@ -5,11 +5,10 @@ import type {
   Expense,
   BalanceResponse,
   SettlementsResponse,
-} from "../types";
-import { logger } from "../utils/logger";
+} from "./types";
+import { logger } from "./utils/logger";
 
 // Use VITE_API_URL if set, otherwise use relative /api path
-// In dev with Vite proxy or in prod behind nginx, /api works correctly
 const getApiUrl = () => {
   if (import.meta.env.VITE_API_URL) {
     return import.meta.env.VITE_API_URL;
@@ -51,7 +50,7 @@ api.interceptors.response.use(
       message,
     });
     return Promise.reject(new Error(message));
-  },
+  }
 );
 
 export interface AuthUser {
@@ -64,7 +63,7 @@ export interface AuthUser {
 
 export const register = async (
   phone: string,
-  name: string,
+  name: string
 ): Promise<{ user: AuthUser }> => {
   logger.info("registering user", { phone });
   const response = await api.post("/auth/register", { phone, name });
@@ -122,7 +121,7 @@ export const createExpense = async (
   payer: string,
   participants: string[],
   category?: string,
-  notes?: string,
+  notes?: string
 ): Promise<Expense> => {
   logger.info("creating expense", { description, amount, payer });
   const response = await api.post("/expenses", {
@@ -146,7 +145,7 @@ export const updateExpense = async (
     participants?: string[];
     category?: string;
     notes?: string;
-  },
+  }
 ): Promise<Expense> => {
   logger.info("updating expense", { expenseId: id });
   const response = await api.put(`/expenses/${id}`, data);
@@ -155,7 +154,7 @@ export const updateExpense = async (
 };
 
 export const deleteExpense = async (
-  id: number,
+  id: number
 ): Promise<{ success: boolean }> => {
   logger.info("deleting expense", { expenseId: id });
   const response = await api.delete(`/expenses/${id}`);
@@ -166,7 +165,7 @@ export const deleteExpense = async (
 export const settle = async (
   from: string,
   to: string,
-  amount: number,
+  amount: number
 ): Promise<Expense> => {
   logger.info("recording settlement", { from, to, amount });
   const response = await api.post("/settle", { from, to, amount });
@@ -187,7 +186,7 @@ export const createGroup = async (name: string): Promise<Group> => {
 };
 
 export const switchGroup = async (
-  groupId: number,
+  groupId: number
 ): Promise<{ success: boolean; current_group_id: number }> => {
   logger.info("switching group", { groupId });
   const response = await api.put("/groups/current", {
@@ -199,14 +198,14 @@ export const switchGroup = async (
 
 export const updateGroup = async (
   groupId: number,
-  name: string,
+  name: string
 ): Promise<Group> => {
   const response = await api.put(`/groups/${groupId}`, { name });
   return response.data;
 };
 
 export const deleteGroup = async (
-  groupId: number,
+  groupId: number
 ): Promise<{ success: boolean; switched_group?: number }> => {
   logger.info("deleting group", { groupId });
   const response = await api.delete(`/groups/${groupId}`);

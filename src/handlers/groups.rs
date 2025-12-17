@@ -45,26 +45,39 @@ pub async fn get_current_group(
 ) -> AppResult<Json<Group>> {
     let app_data = state.read().map_err(|_| AppError::LockError)?;
 
-    if app_data.groups.is_empty() {
-        return Err(AppError::NotFound("No groups exist".to_string()));
-    }
-
-    let group = app_data
+    // Find user's groups (where they are a member)
+    let user_groups: Vec<&Group> = app_data
         .groups
         .iter()
+        .filter(|g| g.members.iter().any(|m| m.id == user.id))
+        .collect();
+
+    if user_groups.is_empty() {
+        return Err(AppError::NotFound("No groups found".to_string()));
+    }
+
+    let group = user_groups
+        .iter()
         .find(|g| g.id == user.current_group_id)
-        .or_else(|| app_data.groups.first())
+        .or(user_groups.first())
         .ok_or_else(AppError::group_not_found)?;
 
-    Ok(Json(group.clone()))
+    Ok(Json((*group).clone()))
 }
 
 pub async fn list_groups(
     State(state): State<SharedState>,
-    _user: AuthUser,
+    user: AuthUser,
 ) -> AppResult<Json<Vec<Group>>> {
     let app_data = state.read().map_err(|_| AppError::LockError)?;
-    Ok(Json(app_data.groups.clone()))
+    // Only return groups where the user is a member
+    let user_groups: Vec<Group> = app_data
+        .groups
+        .iter()
+        .filter(|g| g.members.iter().any(|m| m.id == user.id))
+        .cloned()
+        .collect();
+    Ok(Json(user_groups))
 }
 
 pub async fn create_group(
@@ -82,10 +95,15 @@ pub async fn create_group(
     let mut app_data = state.write().map_err(|_| AppError::LockError)?;
 
     let max_id = app_data.groups.iter().map(|g| g.id).max().unwrap_or(0);
+    // Automatically add the creator as a member
+    let creator_member = crate::models::User {
+        id: user.id,
+        name: user.name.clone(),
+    };
     let group = Group {
         id: max_id + 1,
         name: name.to_string(),
-        members: vec![],
+        members: vec![creator_member],
         expenses: vec![],
         simplify_debts: false,
         settled_settlements: vec![],
@@ -196,10 +214,21 @@ pub async fn get_balances(
 ) -> AppResult<Json<BalanceResponse>> {
     let app_data = state.read().map_err(|_| AppError::LockError)?;
 
-    let group = app_data
+    // Find user's groups (where they are a member)
+    let user_groups: Vec<&Group> = app_data
         .groups
         .iter()
+        .filter(|g| g.members.iter().any(|m| m.id == user.id))
+        .collect();
+
+    if user_groups.is_empty() {
+        return Err(AppError::NotFound("No groups found".to_string()));
+    }
+
+    let group = user_groups
+        .iter()
         .find(|g| g.id == user.current_group_id)
+        .or(user_groups.first())
         .ok_or_else(AppError::group_not_found)?;
 
     let balances = calculate_balances(group);
@@ -212,10 +241,21 @@ pub async fn get_settlements(
 ) -> AppResult<Json<SettlementsResponse>> {
     let app_data = state.read().map_err(|_| AppError::LockError)?;
 
-    let group = app_data
+    // Find user's groups (where they are a member)
+    let user_groups: Vec<&Group> = app_data
         .groups
         .iter()
+        .filter(|g| g.members.iter().any(|m| m.id == user.id))
+        .collect();
+
+    if user_groups.is_empty() {
+        return Err(AppError::NotFound("No groups found".to_string()));
+    }
+
+    let group = user_groups
+        .iter()
         .find(|g| g.id == user.current_group_id)
+        .or(user_groups.first())
         .ok_or_else(AppError::group_not_found)?;
 
     let mut settlements = if group.simplify_debts {
@@ -240,9 +280,11 @@ pub async fn toggle_simplify(
 ) -> AppResult<Json<serde_json::Value>> {
     let mut app_data = state.write().map_err(|_| AppError::LockError)?;
 
+    // Find user's current group (where they are a member)
     let group = app_data
         .groups
         .iter_mut()
+        .filter(|g| g.members.iter().any(|m| m.id == user.id))
         .find(|g| g.id == user.current_group_id)
         .ok_or_else(AppError::group_not_found)?;
 
