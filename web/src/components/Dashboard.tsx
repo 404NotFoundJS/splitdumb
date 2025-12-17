@@ -7,6 +7,7 @@ import {
   deleteUser,
 } from "../services/api";
 import * as Types from "../types";
+import { useToast } from "../contexts/ToastContext";
 
 interface DashboardProps {
   refresh: boolean;
@@ -21,6 +22,7 @@ const Dashboard: React.FC<DashboardProps> = ({
   onUpdateGroup,
   onDeleteGroup,
 }) => {
+  const toast = useToast();
   const [group, setGroup] = useState<Types.Group | null>(null);
   const [balances, setBalances] = useState<Record<string, number>>({});
   const [settlements, setSettlements] = useState<Types.Settlement[]>([]);
@@ -44,39 +46,59 @@ const Dashboard: React.FC<DashboardProps> = ({
       setBalances(balancesData.balances);
       setSettlements(settlementsData.settlements);
     } catch (err: any) {
-      console.error("Failed to fetch group data:", err);
-      setError(
-        err.response?.data?.error || err.message || "Unknown error occurred",
-      );
+      const errorMsg =
+        err.response?.data?.error || err.message || "Unknown error occurred";
+      setError(errorMsg);
+      toast.error(errorMsg);
     }
   };
 
-  const handleDeleteExpense = async (expenseId: number) => {
-    if (!confirm("Are you sure you want to delete this expense?")) {
-      return;
-    }
-    try {
-      await deleteExpense(expenseId);
-      onRefresh();
-    } catch (err: any) {
-      console.error("Failed to delete expense:", err);
-      alert(err.response?.data?.error || "Failed to delete expense");
-    }
+  const handleDeleteExpense = async (
+    expenseId: number,
+    description: string,
+  ) => {
+    toast.confirm("Are you sure you want to delete this expense?", async () => {
+      if (!group) return;
+
+      const previousExpenses = [...group.expenses];
+      setGroup({
+        ...group,
+        expenses: group.expenses.filter((e) => e.id !== expenseId),
+      });
+
+      try {
+        await deleteExpense(expenseId);
+        onRefresh();
+        toast.success(`Expense "${description}" deleted successfully`);
+      } catch (err: any) {
+        setGroup({ ...group, expenses: previousExpenses });
+        toast.error(err.response?.data?.error || "Failed to delete expense");
+      }
+    });
   };
 
   const handleDeleteUser = async (userId: number, userName: string) => {
-    if (
-      !confirm(`Are you sure you want to remove ${userName} from this group?`)
-    ) {
-      return;
-    }
-    try {
-      await deleteUser(userId);
-      onRefresh();
-    } catch (err: any) {
-      console.error("Failed to delete user:", err);
-      alert(err.response?.data?.error || "Failed to delete user");
-    }
+    toast.confirm(
+      `Are you sure you want to remove ${userName} from this group?`,
+      async () => {
+        if (!group) return;
+
+        const previousMembers = [...group.members];
+        setGroup({
+          ...group,
+          members: group.members.filter((m) => m.id !== userId),
+        });
+
+        try {
+          await deleteUser(userId);
+          onRefresh();
+          toast.success(`${userName} removed from group successfully`);
+        } catch (err: any) {
+          setGroup({ ...group, members: previousMembers });
+          toast.error(err.response?.data?.error || "Failed to remove user");
+        }
+      },
+    );
   };
 
   const startEdit = () => {
@@ -99,7 +121,7 @@ const Dashboard: React.FC<DashboardProps> = ({
       setIsEditing(false);
       setEditedName("");
     } catch (error) {
-      console.error("Failed to update group:", error);
+      setEditedName(group.name);
     }
   };
 
@@ -270,7 +292,9 @@ const Dashboard: React.FC<DashboardProps> = ({
                     <div className="expense-actions">
                       <button
                         className="btn btn-sm btn-danger"
-                        onClick={() => handleDeleteExpense(expense.id)}
+                        onClick={() =>
+                          handleDeleteExpense(expense.id, expense.description)
+                        }
                       >
                         Delete
                       </button>

@@ -10,9 +10,11 @@ import {
   deleteGroup,
 } from "./services/api";
 import * as Types from "./types";
+import { useToast } from "./contexts/ToastContext";
 import "./App.css";
 
 function App() {
+  const toast = useToast();
   const [refreshDashboard, setRefreshDashboard] = useState(false);
   const [groups, setGroups] = useState<Types.Group[]>([]);
   const [currentGroupId, setCurrentGroupId] = useState<number>(1);
@@ -27,8 +29,8 @@ function App() {
     try {
       const fetchedGroups = await listGroups();
       setGroups(fetchedGroups);
-    } catch (error) {
-      console.error("Failed to fetch groups:", error);
+    } catch (error: any) {
+      toast.error(error.response?.data?.error || "Failed to fetch groups");
     }
   };
 
@@ -37,12 +39,16 @@ function App() {
   };
 
   const handleSwitchGroup = async (groupId: number) => {
+    const previousGroupId = currentGroupId;
+    setCurrentGroupId(groupId);
+    handleUpdate();
+
     try {
       await switchGroup(groupId);
-      setCurrentGroupId(groupId);
+    } catch (error: any) {
+      setCurrentGroupId(previousGroupId);
       handleUpdate();
-    } catch (error) {
-      console.error("Failed to switch group:", error);
+      toast.error(error.response?.data?.error || "Failed to switch group");
     }
   };
 
@@ -50,25 +56,44 @@ function App() {
     e.preventDefault();
     if (!newGroupName.trim()) return;
 
+    const tempGroup: Types.Group = {
+      id: Date.now(),
+      name: newGroupName,
+      members: [],
+      expenses: [],
+    };
+
+    setGroups([...groups, tempGroup]);
+    setNewGroupName("");
+    setShowCreateGroup(false);
+
     try {
-      const newGroup = await createGroup(newGroupName);
+      const newGroup = await createGroup(tempGroup.name);
       await fetchGroups();
-      setNewGroupName("");
-      setShowCreateGroup(false);
       await handleSwitchGroup(newGroup.id);
-    } catch (error) {
-      console.error("Failed to create group:", error);
+      toast.success(`Group "${newGroup.name}" created successfully`);
+    } catch (error: any) {
+      setGroups(groups.filter((g) => g.id !== tempGroup.id));
+      setShowCreateGroup(true);
+      setNewGroupName(tempGroup.name);
+      toast.error(error.response?.data?.error || "Failed to create group");
     }
   };
 
   const handleUpdateGroup = async (groupId: number, newName: string) => {
+    const previousGroups = [...groups];
+    setGroups(
+      groups.map((g) => (g.id === groupId ? { ...g, name: newName } : g)),
+    );
+
     try {
       await updateGroup(groupId, newName);
       await fetchGroups();
       handleUpdate();
-    } catch (error) {
-      console.error("Failed to update group:", error);
-      alert("Failed to update group");
+      toast.success("Group name updated successfully");
+    } catch (error: any) {
+      setGroups(previousGroups);
+      toast.error(error.response?.data?.error || "Failed to update group");
       throw error;
     }
   };
@@ -77,28 +102,30 @@ function App() {
     const group = groups.find((g) => g.id === groupId);
     if (!group) return;
 
-    if (
-      !confirm(
-        `Are you sure you want to delete "${group.name}"? This will permanently delete all users and expenses in this group.`,
-      )
-    ) {
-      return;
-    }
+    toast.confirm(
+      `Are you sure you want to delete "${group.name}"? This will permanently delete all users and expenses in this group.`,
+      async () => {
+        const previousGroups = [...groups];
+        const previousGroupId = currentGroupId;
+        setGroups(groups.filter((g) => g.id !== groupId));
 
-    try {
-      const response = await deleteGroup(groupId);
+        try {
+          const response = await deleteGroup(groupId);
 
-      // If backend switched groups, update current group
-      if (response.switched_group) {
-        setCurrentGroupId(response.switched_group);
-      }
+          if (response.switched_group) {
+            setCurrentGroupId(response.switched_group);
+          }
 
-      await fetchGroups();
-      handleUpdate();
-    } catch (error: any) {
-      console.error("Failed to delete group:", error);
-      alert(error.response?.data?.error || "Failed to delete group");
-    }
+          await fetchGroups();
+          handleUpdate();
+          toast.success(`Group "${group.name}" deleted successfully`);
+        } catch (error: any) {
+          setGroups(previousGroups);
+          setCurrentGroupId(previousGroupId);
+          toast.error(error.response?.data?.error || "Failed to delete group");
+        }
+      },
+    );
   };
 
   return (

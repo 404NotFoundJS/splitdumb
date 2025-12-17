@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { createExpense, getGroup } from "../services/api";
 import * as Types from "../types";
+import { useToast } from "../contexts/ToastContext";
 
 interface ExpenseFormProps {
   onExpenseAdded: () => void;
@@ -11,6 +12,7 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
   onExpenseAdded,
   refresh,
 }) => {
+  const toast = useToast();
   const [description, setDescription] = useState("");
   const [amount, setAmount] = useState<number>(0);
   const [payer, setPayer] = useState("");
@@ -18,7 +20,7 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
   const [category, setCategory] = useState("");
   const [notes, setNotes] = useState("");
   const [users, setUsers] = useState<Types.User[]>([]);
-  const [error, setError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const categories = [
     "Food",
@@ -60,27 +62,51 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!description || amount <= 0 || !payer || participants.length === 0)
+    if (
+      !description ||
+      amount <= 0 ||
+      !payer ||
+      participants.length === 0 ||
+      isSubmitting
+    )
       return;
 
-    setError(null);
+    setIsSubmitting(true);
+    const expenseData = {
+      description,
+      amount,
+      payer,
+      participants,
+      category,
+      notes,
+    };
+
+    setDescription("");
+    setAmount(0);
+    setParticipants([]);
+    setCategory("");
+    setNotes("");
+
     try {
       await createExpense(
-        description,
-        amount,
-        payer,
-        participants,
-        category || undefined,
-        notes || undefined,
+        expenseData.description,
+        expenseData.amount,
+        expenseData.payer,
+        expenseData.participants,
+        expenseData.category || undefined,
+        expenseData.notes || undefined,
       );
-      setDescription("");
-      setAmount(0);
-      setParticipants([]);
-      setCategory("");
-      setNotes("");
       onExpenseAdded();
+      toast.success(`Expense "${expenseData.description}" added successfully`);
     } catch (err: any) {
-      setError(err.response?.data?.error || "Failed to add expense");
+      setDescription(expenseData.description);
+      setAmount(expenseData.amount);
+      setParticipants(expenseData.participants);
+      setCategory(expenseData.category);
+      setNotes(expenseData.notes);
+      toast.error(err.response?.data?.error || "Failed to add expense");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -88,11 +114,6 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
     <div className="card form-card">
       <div className="card-body">
         <h5 className="card-title">💸 Add New Expense</h5>
-        {error && (
-          <div className="alert alert-danger" style={{ marginBottom: "1rem" }}>
-            {error}
-          </div>
-        )}
         <form onSubmit={handleSubmit}>
           <div className="form-group">
             <label htmlFor="expenseDescription" className="form-label">
@@ -105,6 +126,7 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
               placeholder="e.g., Dinner, Movie tickets"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
+              disabled={isSubmitting}
               required
             />
           </div>
@@ -121,6 +143,7 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
               min="0.01"
               value={amount || ""}
               onChange={(e) => setAmount(parseFloat(e.target.value))}
+              disabled={isSubmitting}
               required
             />
           </div>
@@ -229,8 +252,12 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
               ))}
             </div>
           </div>
-          <button type="submit" className="btn btn-primary w-100">
-            Add Expense
+          <button
+            type="submit"
+            className="btn btn-primary w-100"
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? "Adding..." : "Add Expense"}
           </button>
         </form>
       </div>
