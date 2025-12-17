@@ -118,6 +118,7 @@ const Dashboard: React.FC<DashboardProps> = ({
       async () => {
         try {
           await settle(from, to, amount);
+          await fetchGroupData();
           onRefresh();
           toast.success(`Settlement recorded: ${from} paid ${to}`);
         } catch (err) {
