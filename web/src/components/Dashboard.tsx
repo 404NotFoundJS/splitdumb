@@ -156,22 +156,26 @@ const Dashboard: React.FC<DashboardProps> = ({
         />
       </div>
 
-      {/* Two-column layout for main content */}
+      {/* Three-column layout for main content */}
       <div className="dashboard-grid">
-        {/* Left Column: People */}
+        {/* Column 1: Members */}
         <div className="dashboard-column">
           <MemberList members={group.members} onDeleteUser={handleDeleteUser} />
           <UserForm onUserAdded={onRefresh} />
-          <BalanceSummary balances={balances} />
         </div>
 
-        {/* Right Column: Transactions */}
-        <div className="dashboard-column">
+        {/* Column 2: Expenses */}
+        <div className="dashboard-column dashboard-column-wide">
           <ExpenseList
             expenses={group.expenses}
             onDeleteExpense={handleDeleteExpense}
           />
           <ExpenseForm onExpenseAdded={onRefresh} refresh={refresh} />
+        </div>
+
+        {/* Column 3: Summary */}
+        <div className="dashboard-column">
+          <BalanceSummary balances={balances} />
           <SettlementCard settlements={settlements} onSettle={handleSettle} />
         </div>
       </div>
