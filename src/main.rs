@@ -163,6 +163,10 @@ async fn run_server(port: u16, data_file: &str) {
         // Balance and settlement routes
         .route("/api/balances", get(groups::get_balances))
         .route("/api/settlements", get(groups::get_settlements))
+        .route(
+            "/api/settlements/simplified",
+            get(groups::get_simplified_settlements),
+        )
         // Middleware
         .layer(TraceLayer::new_for_http())
         .layer(CorsLayer::permissive())

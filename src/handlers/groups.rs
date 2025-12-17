@@ -5,7 +5,9 @@ use axum::{
 use serde::{Deserialize, Serialize};
 
 use crate::errors::{AppError, AppResult};
-use crate::logic::{Settlement, calculate_balances, calculate_settlements};
+use crate::logic::{
+    Settlement, calculate_balances, calculate_settlements, calculate_simplified_settlements,
+};
 use crate::models::Group;
 use crate::storage;
 
@@ -205,5 +207,21 @@ pub async fn get_settlements(
         .ok_or_else(|| AppError::NotFound("Current group not found".to_string()))?;
 
     let settlements = calculate_settlements(group);
+    Ok(Json(SettlementsResponse { settlements }))
+}
+
+pub async fn get_simplified_settlements(
+    State(state): State<SharedState>,
+) -> AppResult<Json<SettlementsResponse>> {
+    let app_data = state.read().map_err(|_| AppError::LockError)?;
+
+    let current_id = app_data.current_group_id;
+    let group = app_data
+        .groups
+        .iter()
+        .find(|g| g.id == current_id)
+        .ok_or_else(|| AppError::NotFound("Current group not found".to_string()))?;
+
+    let settlements = calculate_simplified_settlements(group);
     Ok(Json(SettlementsResponse { settlements }))
 }

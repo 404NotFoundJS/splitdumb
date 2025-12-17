@@ -3,6 +3,7 @@ import {
   getGroup,
   getBalances,
   getSettlements,
+  getSimplifiedSettlements,
   deleteExpense,
   deleteUser,
   settle,
@@ -34,15 +35,19 @@ const Dashboard: React.FC<DashboardProps> = ({
   const [group, setGroup] = useState<Types.Group | null>(null);
   const [balances, setBalances] = useState<Record<string, number>>({});
   const [settlements, setSettlements] = useState<Types.Settlement[]>([]);
+  const [isSimplified, setIsSimplified] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const fetchGroupData = useCallback(async () => {
     setError(null);
     try {
+      const settlementsFunc = isSimplified
+        ? getSimplifiedSettlements
+        : getSettlements;
       const [groupData, balancesData, settlementsData] = await Promise.all([
         getGroup(),
         getBalances(),
-        getSettlements(),
+        settlementsFunc(),
       ]);
       setGroup(groupData);
       setBalances(balancesData.balances);
@@ -53,12 +58,16 @@ const Dashboard: React.FC<DashboardProps> = ({
       setError(errorMsg);
       toast.error(errorMsg);
     }
-  }, [toast]);
+  }, [toast, isSimplified]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchGroupData();
   }, [refreshKey, fetchGroupData]);
+
+  const handleToggleSimplify = useCallback(() => {
+    setIsSimplified((prev) => !prev);
+  }, []);
 
   const handleDeleteExpense = async (
     expenseId: number,
@@ -177,7 +186,12 @@ const Dashboard: React.FC<DashboardProps> = ({
         {/* Column 3: Summary */}
         <div className="dashboard-column">
           <BalanceSummary balances={balances} />
-          <SettlementCard settlements={settlements} onSettle={handleSettle} />
+          <SettlementCard
+            settlements={settlements}
+            onSettle={handleSettle}
+            isSimplified={isSimplified}
+            onToggleSimplify={handleToggleSimplify}
+          />
         </div>
       </div>
     </div>

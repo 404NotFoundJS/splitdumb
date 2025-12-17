@@ -41,6 +41,11 @@ export const getSettlements = async () => {
   return response.data;
 };
 
+export const getSimplifiedSettlements = async () => {
+  const response = await api.get("/settlements/simplified");
+  return response.data;
+};
+
 export const createUser = async (name: string) => {
   const response = await api.post("/users", { name });
   return response.data;

@@ -72,6 +72,17 @@
   padding: 1rem;
 }
 
+.settlement-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.settlement-header .card-title {
+  margin-bottom: 0;
+}
+
 .settlement-item {
   display: flex;
   justify-content: space-between;

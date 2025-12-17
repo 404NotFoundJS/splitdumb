@@ -1,6 +1,8 @@
 #[cfg(test)]
 mod tests {
-    use crate::logic::{calculate_balances, calculate_settlements};
+    use crate::logic::{
+        calculate_balances, calculate_settlements, calculate_simplified_settlements,
+    };
     use crate::models::{Expense, Group, User};
 
     fn create_test_users() -> (User, User, User) {
@@ -247,14 +249,73 @@ mod tests {
             ],
         };
 
-        let settlements = calculate_settlements(&group);
+        // Use simplified settlements for total balance check
+        let settlements = calculate_simplified_settlements(&group);
 
-        // Verify total settlements balance out
+        // Verify total settlements balance out (only true for simplified algorithm)
         let balances = calculate_balances(&group);
         let total_owed: f64 = balances.values().filter(|&&v| v < 0.0).map(|v| -v).sum();
         let total_settlements: f64 = settlements.iter().map(|s| s.amount).sum();
 
         assert!((total_owed - total_settlements).abs() < 0.01);
+    }
+
+    #[test]
+    fn test_pairwise_settlements_stability() {
+        // Test that pairwise settlements are stable - each pair is independent
+        let (alice, bob, charlie) = create_test_users();
+
+        let group = Group {
+            id: 1,
+            name: "Test Group".to_string(),
+            members: vec![alice.clone(), bob.clone(), charlie.clone()],
+            expenses: vec![
+                create_expense(
+                    1,
+                    "Dinner",
+                    90.0,
+                    alice.clone(),
+                    vec![alice.clone(), bob.clone(), charlie.clone()],
+                ),
+                create_expense(
+                    2,
+                    "Taxi",
+                    30.0,
+                    bob.clone(),
+                    vec![alice.clone(), bob.clone(), charlie.clone()],
+                ),
+            ],
+        };
+
+        let settlements = calculate_settlements(&group);
+
+        // With pairwise settlements:
+        // Dinner: Bob owes Alice $30, Charlie owes Alice $30
+        // Taxi: Alice owes Bob $10, Charlie owes Bob $10
+        // Net: Bob owes Alice $20, Charlie owes Alice $30, Charlie owes Bob $10
+
+        // Verify we have exactly 3 settlements (one per pair with debt)
+        assert_eq!(settlements.len(), 3);
+
+        // Verify each settlement is correct
+        let bob_to_alice = settlements
+            .iter()
+            .find(|s| s.from == "Bob" && s.to == "Alice");
+        let charlie_to_alice = settlements
+            .iter()
+            .find(|s| s.from == "Charlie" && s.to == "Alice");
+        let charlie_to_bob = settlements
+            .iter()
+            .find(|s| s.from == "Charlie" && s.to == "Bob");
+
+        assert!(bob_to_alice.is_some());
+        assert!((bob_to_alice.unwrap().amount - 20.0).abs() < 0.01);
+
+        assert!(charlie_to_alice.is_some());
+        assert!((charlie_to_alice.unwrap().amount - 30.0).abs() < 0.01);
+
+        assert!(charlie_to_bob.is_some());
+        assert!((charlie_to_bob.unwrap().amount - 10.0).abs() < 0.01);
     }
 
     #[test]
