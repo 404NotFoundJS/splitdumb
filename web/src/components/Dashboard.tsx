@@ -125,11 +125,22 @@ const Dashboard: React.FC<DashboardProps> = ({
     toast.confirm(
       `Mark ${from} as having paid ${to} $${amount.toFixed(2)}?`,
       async () => {
+        // Optimistically remove this settlement from UI immediately
+        const previousSettlements = [...settlements];
+        setSettlements(
+          settlements.filter(
+            (s) => !(s.from === from && s.to === to && s.amount === amount),
+          ),
+        );
+
         try {
           await settle(from, to, amount);
-          onRefresh();
+          // Don't refresh - just keep the optimistic update
+          // Other settlements remain unchanged
           toast.success(`Settlement recorded: ${from} paid ${to}`);
         } catch (err) {
+          // Restore on failure
+          setSettlements(previousSettlements);
           toast.error(
             err instanceof Error ? err.message : "Failed to record settlement",
           );
