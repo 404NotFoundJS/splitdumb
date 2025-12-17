@@ -319,6 +319,83 @@ mod tests {
     }
 
     #[test]
+    fn test_pairwise_settlements_after_settle() {
+        // Test that settling one debt doesn't affect other settlements
+        let (alice, bob, charlie) = create_test_users();
+
+        let group = Group {
+            id: 1,
+            name: "Test Group".to_string(),
+            members: vec![alice.clone(), bob.clone(), charlie.clone()],
+            expenses: vec![
+                // Original expenses
+                create_expense(
+                    1,
+                    "Dinner",
+                    90.0,
+                    alice.clone(),
+                    vec![alice.clone(), bob.clone(), charlie.clone()],
+                ),
+                create_expense(
+                    2,
+                    "Taxi",
+                    30.0,
+                    bob.clone(),
+                    vec![alice.clone(), bob.clone(), charlie.clone()],
+                ),
+                // Bob settles his debt to Alice ($20)
+                // This creates an expense where Bob pays and only Alice participates
+                create_expense(3, "Bob paid Alice", 20.0, bob.clone(), vec![alice.clone()]),
+            ],
+        };
+
+        let settlements = calculate_settlements(&group);
+
+        // After Bob settles with Alice:
+        // - Bob owes Alice: $30 (dinner) - $10 (taxi offset) = $20, minus $20 (settlement) = $0
+        // - Charlie owes Alice: $30 (dinner) - $10 (taxi offset) = $20... wait that's not right
+        // Let me recalculate:
+        // Dinner: Bob owes Alice $30, Charlie owes Alice $30
+        // Taxi: Alice owes Bob $10, Charlie owes Bob $10
+        // Settlement: Alice owes Bob $20
+        // Net Bob↔Alice: Bob owes $30, Alice owes $30 (10+20) = 0
+        // Net Charlie↔Alice: Charlie owes $30
+        // Net Charlie↔Bob: Charlie owes $10
+
+        // Verify Bob no longer owes Alice
+        let bob_to_alice = settlements
+            .iter()
+            .find(|s| s.from == "Bob" && s.to == "Alice");
+        assert!(
+            bob_to_alice.is_none(),
+            "Bob should not owe Alice after settlement"
+        );
+
+        // Verify Charlie's settlements remain unchanged
+        let charlie_to_alice = settlements
+            .iter()
+            .find(|s| s.from == "Charlie" && s.to == "Alice");
+        let charlie_to_bob = settlements
+            .iter()
+            .find(|s| s.from == "Charlie" && s.to == "Bob");
+
+        assert!(charlie_to_alice.is_some());
+        assert!(
+            (charlie_to_alice.unwrap().amount - 30.0).abs() < 0.01,
+            "Charlie→Alice should still be $30"
+        );
+
+        assert!(charlie_to_bob.is_some());
+        assert!(
+            (charlie_to_bob.unwrap().amount - 10.0).abs() < 0.01,
+            "Charlie→Bob should still be $10"
+        );
+
+        // Verify only 2 settlements remain (Charlie→Alice and Charlie→Bob)
+        assert_eq!(settlements.len(), 2, "Should have exactly 2 settlements");
+    }
+
+    #[test]
     fn test_balances_with_decimal_amounts() {
         let (alice, bob, _) = create_test_users();
 
