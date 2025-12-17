@@ -17,7 +17,7 @@ mod storage;
 mod tests;
 
 use cli::{Cli, Commands};
-use handlers::{expenses, groups, users};
+use handlers::{auth, expenses, groups, users};
 use logic::{add_expense, calculate_balances, calculate_settlements};
 use models::{Expense, User};
 
@@ -41,9 +41,8 @@ async fn main() {
 
             let group = app_data
                 .groups
-                .iter_mut()
-                .find(|g| g.id == app_data.current_group_id)
-                .expect("Current group not found");
+                .first_mut()
+                .expect("No groups found. Create a group first.");
 
             let payer_user = group
                 .members
@@ -89,9 +88,8 @@ async fn main() {
 
             let group = app_data
                 .groups
-                .iter()
-                .find(|g| g.id == app_data.current_group_id)
-                .expect("Current group not found");
+                .first()
+                .expect("No groups found. Create a group first.");
 
             let balances = calculate_balances(group);
             println!("Balances for group '{}':", group.name);
@@ -106,9 +104,8 @@ async fn main() {
 
             let group = app_data
                 .groups
-                .iter()
-                .find(|g| g.id == app_data.current_group_id)
-                .expect("Current group not found");
+                .first()
+                .expect("No groups found. Create a group first.");
 
             let settlements = calculate_settlements(group);
             println!("Settlements for group '{}':", group.name);
@@ -142,6 +139,10 @@ async fn run_server(port: u16, data_file: &str) {
     let shared_state = Arc::new(RwLock::new(app_data));
 
     let app = Router::new()
+        // Auth routes
+        .route("/api/auth/register", post(auth::register))
+        .route("/api/auth/login", post(auth::login))
+        .route("/api/auth/me", get(auth::get_me))
         // Group routes
         .route(
             "/api/groups",

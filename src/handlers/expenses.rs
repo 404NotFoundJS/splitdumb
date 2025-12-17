@@ -6,7 +6,7 @@ use serde::Deserialize;
 
 use crate::errors::{AppError, AppResult};
 use crate::logic::add_expense;
-use crate::models::{Expense, SettledSettlement};
+use crate::models::{AuthUser, Expense, SettledSettlement};
 use crate::storage;
 
 use super::SharedState;
@@ -30,6 +30,7 @@ pub struct SettleRequest {
 
 pub async fn create_expense(
     State(state): State<SharedState>,
+    auth_user: AuthUser,
     Json(payload): Json<CreateExpenseRequest>,
 ) -> AppResult<Json<Expense>> {
     let description = payload.description.trim();
@@ -49,11 +50,10 @@ pub async fn create_expense(
 
     let mut app_data = state.write().map_err(|_| AppError::LockError)?;
 
-    let current_id = app_data.current_group_id;
     let group = app_data
         .groups
         .iter_mut()
-        .find(|g| g.id == current_id)
+        .find(|g| g.id == auth_user.current_group_id)
         .ok_or_else(|| AppError::NotFound("Current group not found".to_string()))?;
 
     let payer_user = group
@@ -98,15 +98,15 @@ pub async fn create_expense(
 
 pub async fn delete_expense(
     State(state): State<SharedState>,
+    auth_user: AuthUser,
     Path(id): Path<usize>,
 ) -> AppResult<Json<serde_json::Value>> {
     let mut app_data = state.write().map_err(|_| AppError::LockError)?;
 
-    let current_id = app_data.current_group_id;
     let group = app_data
         .groups
         .iter_mut()
-        .find(|g| g.id == current_id)
+        .find(|g| g.id == auth_user.current_group_id)
         .ok_or_else(|| AppError::NotFound("Current group not found".to_string()))?;
 
     let index = group
@@ -138,6 +138,7 @@ pub async fn delete_expense(
 
 pub async fn settle(
     State(state): State<SharedState>,
+    auth_user: AuthUser,
     Json(payload): Json<SettleRequest>,
 ) -> AppResult<Json<Expense>> {
     if payload.amount <= 0.0 {
@@ -151,11 +152,10 @@ pub async fn settle(
 
     let mut app_data = state.write().map_err(|_| AppError::LockError)?;
 
-    let current_id = app_data.current_group_id;
     let group = app_data
         .groups
         .iter_mut()
-        .find(|g| g.id == current_id)
+        .find(|g| g.id == auth_user.current_group_id)
         .ok_or_else(|| AppError::NotFound("Current group not found".to_string()))?;
 
     let from_user = group

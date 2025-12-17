@@ -2,13 +2,14 @@ import React from "react";
 import { createUser } from "../services/api";
 import { useToast } from "../contexts/ToastContext";
 import { useForm } from "../hooks/useForm";
+import { formatPhoneNumber, isValidPhone } from "../utils/phone";
 
 interface UserFormProps {
   onUserAdded: () => void;
 }
 
 interface UserFormValues {
-  name: string;
+  phone: string;
 }
 
 const UserForm: React.FC<UserFormProps> = ({ onUserAdded }) => {
@@ -16,12 +17,12 @@ const UserForm: React.FC<UserFormProps> = ({ onUserAdded }) => {
 
   const { values, isSubmitting, handleChange, handleSubmit } =
     useForm<UserFormValues>({
-      initialValues: { name: "" },
-      validate: (values) => values.name.trim().length > 0,
+      initialValues: { phone: "" },
+      validate: (values) => isValidPhone(values.phone),
       onSubmit: async (values) => {
-        await createUser(values.name);
+        const user = await createUser(values.phone);
         onUserAdded();
-        toast.success(`User "${values.name}" added successfully`);
+        toast.success(`User "${user.name}" added successfully`);
       },
       onError: (error) => {
         toast.error(error.message);
@@ -31,19 +32,21 @@ const UserForm: React.FC<UserFormProps> = ({ onUserAdded }) => {
   return (
     <div className="card form-card">
       <div className="card-body">
-        <h5 className="card-title">Add New User</h5>
+        <h5 className="card-title">Add Member</h5>
         <form onSubmit={handleSubmit}>
           <div className="form-group">
-            <label htmlFor="userName" className="form-label">
-              Name
+            <label htmlFor="userPhone" className="form-label">
+              Phone Number
             </label>
             <input
-              id="userName"
-              type="text"
+              id="userPhone"
+              type="tel"
               className="form-control"
-              placeholder="Enter name"
-              value={values.name}
-              onChange={(e) => handleChange("name", e.target.value)}
+              placeholder="XXX-XXXX-XXXX"
+              value={values.phone}
+              onChange={(e) =>
+                handleChange("phone", formatPhoneNumber(e.target.value))
+              }
               disabled={isSubmitting}
               required
             />
@@ -51,9 +54,9 @@ const UserForm: React.FC<UserFormProps> = ({ onUserAdded }) => {
           <button
             type="submit"
             className="btn btn-primary w-100"
-            disabled={isSubmitting}
+            disabled={isSubmitting || !isValidPhone(values.phone)}
           >
-            {isSubmitting ? "Adding..." : "Add User"}
+            {isSubmitting ? "Adding..." : "Add Member"}
           </button>
         </form>
       </div>

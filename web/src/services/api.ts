@@ -16,6 +16,15 @@ const api = axios.create({
   timeout: 10000,
 });
 
+// Request interceptor to add auth token
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem("auth_token");
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
 // Response interceptor for consistent error handling
 api.interceptors.response.use(
   (response) => response,
@@ -25,6 +34,32 @@ api.interceptors.response.use(
     return Promise.reject(new Error(message));
   },
 );
+
+export interface AuthUser {
+  id: number;
+  phone: string;
+  name: string;
+  token: string;
+  current_group_id: number;
+}
+
+export const register = async (
+  phone: string,
+  name: string,
+): Promise<{ user: AuthUser }> => {
+  const response = await api.post("/auth/register", { phone, name });
+  return response.data;
+};
+
+export const login = async (phone: string): Promise<{ user: AuthUser }> => {
+  const response = await api.post("/auth/login", { phone });
+  return response.data;
+};
+
+export const getMe = async (): Promise<AuthUser> => {
+  const response = await api.get("/auth/me");
+  return response.data;
+};
 
 export const getGroup = async () => {
   const response = await api.get("/group");
@@ -46,8 +81,8 @@ export const toggleSimplify = async () => {
   return response.data;
 };
 
-export const createUser = async (name: string) => {
-  const response = await api.post("/users", { name });
+export const createUser = async (phone: string) => {
+  const response = await api.post("/users", { phone });
   return response.data;
 };
 

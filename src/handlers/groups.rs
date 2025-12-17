@@ -8,7 +8,7 @@ use crate::errors::{AppError, AppResult};
 use crate::logic::{
     Settlement, calculate_balances, calculate_settlements, calculate_simplified_settlements,
 };
-use crate::models::Group;
+use crate::models::{AuthUser, Group};
 use crate::storage;
 
 use super::SharedState;
@@ -38,31 +38,37 @@ pub struct SettlementsResponse {
     pub settlements: Vec<Settlement>,
 }
 
-pub async fn get_current_group(State(state): State<SharedState>) -> AppResult<Json<Group>> {
+pub async fn get_current_group(
+    State(state): State<SharedState>,
+    user: AuthUser,
+) -> AppResult<Json<Group>> {
     let app_data = state.read().map_err(|_| AppError::LockError)?;
 
     if app_data.groups.is_empty() {
         return Err(AppError::NotFound("No groups exist".to_string()));
     }
 
-    let current_id = app_data.current_group_id;
     let group = app_data
         .groups
         .iter()
-        .find(|g| g.id == current_id)
+        .find(|g| g.id == user.current_group_id)
         .or_else(|| app_data.groups.first())
         .ok_or_else(|| AppError::NotFound("Current group not found".to_string()))?;
 
     Ok(Json(group.clone()))
 }
 
-pub async fn list_groups(State(state): State<SharedState>) -> AppResult<Json<Vec<Group>>> {
+pub async fn list_groups(
+    State(state): State<SharedState>,
+    _user: AuthUser,
+) -> AppResult<Json<Vec<Group>>> {
     let app_data = state.read().map_err(|_| AppError::LockError)?;
     Ok(Json(app_data.groups.clone()))
 }
 
 pub async fn create_group(
     State(state): State<SharedState>,
+    user: AuthUser,
     Json(payload): Json<CreateGroupRequest>,
 ) -> AppResult<Json<Group>> {
     let name = payload.name.trim();
@@ -87,8 +93,8 @@ pub async fn create_group(
     let is_first_group = app_data.groups.is_empty();
     app_data.groups.push(group.clone());
 
-    if is_first_group {
-        app_data.current_group_id = group.id;
+    if is_first_group && let Some(u) = app_data.users.iter_mut().find(|u| u.id == user.id) {
+        u.current_group_id = group.id;
     }
 
     let app_data_clone = app_data.clone();
@@ -101,6 +107,7 @@ pub async fn create_group(
 
 pub async fn switch_group(
     State(state): State<SharedState>,
+    user: AuthUser,
     Json(payload): Json<SwitchGroupRequest>,
 ) -> AppResult<Json<serde_json::Value>> {
     let mut app_data = state.write().map_err(|_| AppError::LockError)?;
@@ -112,7 +119,9 @@ pub async fn switch_group(
         )));
     }
 
-    app_data.current_group_id = payload.group_id;
+    if let Some(u) = app_data.users.iter_mut().find(|u| u.id == user.id) {
+        u.current_group_id = payload.group_id;
+    }
 
     let app_data_clone = app_data.clone();
     drop(app_data);
@@ -126,6 +135,7 @@ pub async fn switch_group(
 
 pub async fn update_group(
     State(state): State<SharedState>,
+    _user: AuthUser,
     Path(id): Path<usize>,
     Json(payload): Json<UpdateGroupRequest>,
 ) -> AppResult<Json<Group>> {
@@ -157,6 +167,7 @@ pub async fn update_group(
 
 pub async fn delete_group(
     State(state): State<SharedState>,
+    user: AuthUser,
     Path(id): Path<usize>,
 ) -> AppResult<Json<serde_json::Value>> {
     let mut app_data = state.write().map_err(|_| AppError::LockError)?;
@@ -169,9 +180,12 @@ pub async fn delete_group(
 
     app_data.groups.remove(index);
 
-    let switched_group = if app_data.current_group_id == id {
-        app_data.current_group_id = app_data.groups.first().map(|g| g.id).unwrap_or(0);
-        Some(app_data.current_group_id)
+    let switched_group = if user.current_group_id == id {
+        let new_id = app_data.groups.first().map(|g| g.id).unwrap_or(0);
+        if let Some(u) = app_data.users.iter_mut().find(|u| u.id == user.id) {
+            u.current_group_id = new_id;
+        }
+        Some(new_id)
     } else {
         None
     };
@@ -187,14 +201,16 @@ pub async fn delete_group(
     })))
 }
 
-pub async fn get_balances(State(state): State<SharedState>) -> AppResult<Json<BalanceResponse>> {
+pub async fn get_balances(
+    State(state): State<SharedState>,
+    user: AuthUser,
+) -> AppResult<Json<BalanceResponse>> {
     let app_data = state.read().map_err(|_| AppError::LockError)?;
 
-    let current_id = app_data.current_group_id;
     let group = app_data
         .groups
         .iter()
-        .find(|g| g.id == current_id)
+        .find(|g| g.id == user.current_group_id)
         .ok_or_else(|| AppError::NotFound("Current group not found".to_string()))?;
 
     let balances = calculate_balances(group);
@@ -203,14 +219,14 @@ pub async fn get_balances(State(state): State<SharedState>) -> AppResult<Json<Ba
 
 pub async fn get_settlements(
     State(state): State<SharedState>,
+    user: AuthUser,
 ) -> AppResult<Json<SettlementsResponse>> {
     let app_data = state.read().map_err(|_| AppError::LockError)?;
 
-    let current_id = app_data.current_group_id;
     let group = app_data
         .groups
         .iter()
-        .find(|g| g.id == current_id)
+        .find(|g| g.id == user.current_group_id)
         .ok_or_else(|| AppError::NotFound("Current group not found".to_string()))?;
 
     let mut settlements = if group.simplify_debts {
@@ -231,14 +247,14 @@ pub async fn get_settlements(
 
 pub async fn toggle_simplify(
     State(state): State<SharedState>,
+    user: AuthUser,
 ) -> AppResult<Json<serde_json::Value>> {
     let mut app_data = state.write().map_err(|_| AppError::LockError)?;
 
-    let current_id = app_data.current_group_id;
     let group = app_data
         .groups
         .iter_mut()
-        .find(|g| g.id == current_id)
+        .find(|g| g.id == user.current_group_id)
         .ok_or_else(|| AppError::NotFound("Current group not found".to_string()))?;
 
     group.simplify_debts = !group.simplify_debts;

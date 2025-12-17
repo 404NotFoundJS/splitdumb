@@ -19,22 +19,22 @@ pub fn load() -> AppData {
     let path = get_data_file();
     if let Ok(mut file) = fs::File::open(path) {
         let mut contents = String::new();
-        if file.read_to_string(&mut contents).is_ok() {
-            if let Ok(data) = serde_json::from_str(&contents) {
-                return data;
-            }
+        if file.read_to_string(&mut contents).is_ok()
+            && let Ok(data) = serde_json::from_str(&contents)
+        {
+            return data;
         }
     }
     AppData {
         groups: vec![],
-        current_group_id: 0,
+        users: vec![],
     }
 }
 
 pub fn save(app_data: &AppData) -> Result<(), AppError> {
     let path = get_data_file();
     let json = serde_json::to_string_pretty(app_data)
-        .map_err(|e| AppError::StorageError(std::io::Error::new(std::io::ErrorKind::Other, e)))?;
+        .map_err(|e| AppError::StorageError(std::io::Error::other(e)))?;
     fs::write(path, json)?;
     Ok(())
 }

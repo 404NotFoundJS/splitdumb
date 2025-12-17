@@ -5,44 +5,42 @@ use axum::{
 use serde::Deserialize;
 
 use crate::errors::{AppError, AppResult};
-use crate::models::User;
+use crate::models::{AuthUser, User};
 use crate::storage;
 
-use super::SharedState;
+use super::{SharedState, validate_phone};
 
 #[derive(Deserialize)]
 pub struct CreateUserRequest {
-    pub name: String,
+    pub phone: String,
 }
 
 pub async fn create_user(
     State(state): State<SharedState>,
+    auth_user: AuthUser,
     Json(payload): Json<CreateUserRequest>,
 ) -> AppResult<Json<User>> {
-    let name = payload.name.trim();
-    if name.is_empty() {
-        return Err(AppError::BadRequest(
-            "User name cannot be empty".to_string(),
-        ));
-    }
-    if name.len() > 100 {
-        return Err(AppError::BadRequest(
-            "User name too long (max 100 chars)".to_string(),
-        ));
-    }
+    let phone = validate_phone(&payload.phone)?;
 
     let mut app_data = state.write().map_err(|_| AppError::LockError)?;
 
-    let current_id = app_data.current_group_id;
+    let registered_user = app_data
+        .users
+        .iter()
+        .find(|u| u.phone == phone)
+        .ok_or_else(|| AppError::NotFound("Phone number not registered".to_string()))?;
+
+    let name = registered_user.name.clone();
+
     let group = app_data
         .groups
         .iter_mut()
-        .find(|g| g.id == current_id)
+        .find(|g| g.id == auth_user.current_group_id)
         .ok_or_else(|| AppError::NotFound("Current group not found".to_string()))?;
 
     if group.members.iter().any(|u| u.name == name) {
         return Err(AppError::BadRequest(format!(
-            "User '{}' already exists",
+            "User '{}' is already in this group",
             name
         )));
     }
@@ -50,7 +48,7 @@ pub async fn create_user(
     let max_id = group.members.iter().map(|u| u.id).max().unwrap_or(0);
     let user = User {
         id: max_id + 1,
-        name: name.to_string(),
+        name,
     };
 
     group.members.push(user.clone());
@@ -65,15 +63,15 @@ pub async fn create_user(
 
 pub async fn delete_user(
     State(state): State<SharedState>,
+    auth_user: AuthUser,
     Path(id): Path<usize>,
 ) -> AppResult<Json<serde_json::Value>> {
     let mut app_data = state.write().map_err(|_| AppError::LockError)?;
 
-    let current_id = app_data.current_group_id;
     let group = app_data
         .groups
         .iter_mut()
-        .find(|g| g.id == current_id)
+        .find(|g| g.id == auth_user.current_group_id)
         .ok_or_else(|| AppError::NotFound("Current group not found".to_string()))?;
 
     let index = group

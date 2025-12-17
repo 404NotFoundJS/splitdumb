@@ -1,6 +1,16 @@
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct AuthUser {
+    pub id: usize,
+    pub phone: String,
+    pub name: String,
+    pub token: String,
+    #[serde(default)]
+    pub current_group_id: usize,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct User {
     pub id: usize,
     pub name: String,
@@ -48,7 +58,8 @@ pub struct Expense {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct AppData {
     pub groups: Vec<Group>,
-    pub current_group_id: usize,
+    #[serde(default)]
+    pub users: Vec<AuthUser>,
 }
 
 fn default_timestamp() -> String {

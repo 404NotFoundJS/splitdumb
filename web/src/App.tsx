@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import Dashboard from "./components/Dashboard";
+import LoginPage from "./components/LoginPage";
 import {
   listGroups,
   createGroup,
@@ -8,10 +9,12 @@ import {
   deleteGroup,
 } from "./services/api";
 import * as Types from "./types";
+import { useAuth } from "./contexts/AuthContext";
 import { useToast } from "./contexts/ToastContext";
 import "./App.css";
 
 function App() {
+  const { user, isLoading: authLoading, logout } = useAuth();
   const toast = useToast();
   const [refreshKey, setRefreshKey] = useState(0);
   const [groups, setGroups] = useState<Types.Group[]>([]);
@@ -38,8 +41,10 @@ function App() {
   }, [toast]);
 
   useEffect(() => {
-    fetchGroups();
-  }, [fetchGroups]);
+    if (user) {
+      fetchGroups();
+    }
+  }, [fetchGroups, user]);
 
   const handleUpdate = useCallback(() => {
     setRefreshKey((k) => k + 1);
@@ -160,7 +165,7 @@ function App() {
     setNewGroupName("");
   };
 
-  if (isLoading) {
+  if (authLoading || (user && isLoading)) {
     return (
       <div className="welcome-page">
         <div className="loading-state">
@@ -169,6 +174,10 @@ function App() {
         </div>
       </div>
     );
+  }
+
+  if (!user) {
+    return <LoginPage />;
   }
 
   if (groups.length === 0) {
@@ -251,6 +260,14 @@ function App() {
                   </button>
                 </>
               )}
+              <span className="user-name">{user.name}</span>
+              <button
+                className="btn btn-sm btn-secondary"
+                onClick={logout}
+                title="Logout"
+              >
+                Logout
+              </button>
             </div>
           </div>
         </div>
