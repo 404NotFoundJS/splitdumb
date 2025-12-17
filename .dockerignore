@@ -1,0 +1,9 @@
+target/
+web/node_modules/
+web/dist/
+*.json
+!package.json
+!tsconfig*.json
+.git/
+.gitignore
+*.md
