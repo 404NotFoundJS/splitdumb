@@ -1,9 +1,9 @@
 target/
 web/node_modules/
 web/dist/
-*.json
-!package.json
-!tsconfig*.json
 .git/
 .gitignore
 *.md
+app_data.json
+app_data.json.bak
+app_data.json.tmp
