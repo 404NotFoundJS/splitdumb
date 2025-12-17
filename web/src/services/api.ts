@@ -6,6 +6,7 @@ import type {
   BalanceResponse,
   SettlementsResponse,
 } from "../types";
+import { logger } from "../utils/logger";
 
 // Use same hostname as the page, with backend port 3000
 const getApiUrl = () => {
@@ -34,10 +35,21 @@ api.interceptors.request.use((config) => {
 
 // Response interceptor for consistent error handling
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    logger.debug("API response", {
+      url: response.config.url,
+      status: response.status,
+    });
+    return response;
+  },
   (error: AxiosError<{ error: string }>) => {
     const message =
       error.response?.data?.error || error.message || "An error occurred";
+    logger.error("API error", {
+      url: error.config?.url,
+      status: error.response?.status,
+      message,
+    });
     return Promise.reject(new Error(message));
   },
 );
@@ -54,12 +66,16 @@ export const register = async (
   phone: string,
   name: string,
 ): Promise<{ user: AuthUser }> => {
+  logger.info("registering user", { phone });
   const response = await api.post("/auth/register", { phone, name });
+  logger.info("user registered", { userId: response.data.user.id });
   return response.data;
 };
 
 export const login = async (phone: string): Promise<{ user: AuthUser }> => {
+  logger.info("logging in", { phone });
   const response = await api.post("/auth/login", { phone });
+  logger.info("user logged in", { userId: response.data.user.id });
   return response.data;
 };
 
@@ -108,6 +124,7 @@ export const createExpense = async (
   category?: string,
   notes?: string,
 ): Promise<Expense> => {
+  logger.info("creating expense", { description, amount, payer });
   const response = await api.post("/expenses", {
     description,
     amount,
@@ -116,6 +133,7 @@ export const createExpense = async (
     category,
     notes,
   });
+  logger.info("expense created", { expenseId: response.data.id });
   return response.data;
 };
 
@@ -130,14 +148,18 @@ export const updateExpense = async (
     notes?: string;
   },
 ): Promise<Expense> => {
+  logger.info("updating expense", { expenseId: id });
   const response = await api.put(`/expenses/${id}`, data);
+  logger.info("expense updated", { expenseId: id });
   return response.data;
 };
 
 export const deleteExpense = async (
   id: number,
 ): Promise<{ success: boolean }> => {
+  logger.info("deleting expense", { expenseId: id });
   const response = await api.delete(`/expenses/${id}`);
+  logger.info("expense deleted", { expenseId: id });
   return response.data;
 };
 
@@ -146,7 +168,9 @@ export const settle = async (
   to: string,
   amount: number,
 ): Promise<Expense> => {
+  logger.info("recording settlement", { from, to, amount });
   const response = await api.post("/settle", { from, to, amount });
+  logger.info("settlement recorded", { expenseId: response.data.id });
   return response.data;
 };
 
@@ -156,16 +180,20 @@ export const listGroups = async (): Promise<Group[]> => {
 };
 
 export const createGroup = async (name: string): Promise<Group> => {
+  logger.info("creating group", { name });
   const response = await api.post("/groups", { name });
+  logger.info("group created", { groupId: response.data.id });
   return response.data;
 };
 
 export const switchGroup = async (
   groupId: number,
 ): Promise<{ success: boolean; current_group_id: number }> => {
+  logger.info("switching group", { groupId });
   const response = await api.put("/groups/current", {
     group_id: groupId,
   });
+  logger.info("group switched", { groupId });
   return response.data;
 };
 
@@ -180,7 +208,9 @@ export const updateGroup = async (
 export const deleteGroup = async (
   groupId: number,
 ): Promise<{ success: boolean; switched_group?: number }> => {
+  logger.info("deleting group", { groupId });
   const response = await api.delete(`/groups/${groupId}`);
+  logger.info("group deleted", { groupId });
   return response.data;
 };
 

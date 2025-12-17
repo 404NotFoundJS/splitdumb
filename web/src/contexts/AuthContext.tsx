@@ -12,6 +12,7 @@ import {
   getMe,
   type AuthUser,
 } from "../services/api";
+import { logger } from "../utils/logger";
 
 interface AuthContextType {
   user: AuthUser | null;
@@ -31,14 +32,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const checkAuth = async () => {
       const token = localStorage.getItem("auth_token");
       if (!token) {
+        logger.debug("no auth token found");
         setIsLoading(false);
         return;
       }
 
       try {
+        logger.debug("validating existing token");
         const me = await getMe();
         setUser(me);
+        logger.info("session restored", { userId: me.id });
       } catch {
+        logger.warn("token validation failed, clearing token");
         localStorage.removeItem("auth_token");
       } finally {
         setIsLoading(false);
@@ -61,6 +66,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const logout = useCallback(() => {
+    logger.info("user logged out");
     localStorage.removeItem("auth_token");
     setUser(null);
   }, []);
