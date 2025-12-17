@@ -5,9 +5,11 @@ import * as Types from '../types';
 interface DashboardProps {
     refresh: boolean;
     onRefresh: () => void;
+    onEditGroup: () => void;
+    onDeleteGroup: () => void;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ refresh, onRefresh }) => {
+const Dashboard: React.FC<DashboardProps> = ({ refresh, onRefresh, onEditGroup, onDeleteGroup }) => {
     const [group, setGroup] = useState<Types.Group | null>(null);
     const [balances, setBalances] = useState<Record<string, number>>({});
     const [settlements, setSettlements] = useState<Types.Settlement[]>([]);
@@ -64,7 +66,25 @@ const Dashboard: React.FC<DashboardProps> = ({ refresh, onRefresh }) => {
         <div>
             <div className="card dashboard-card">
                 <div className="dashboard-group-header">
-                    <h3 className="dashboard-group-name">{group.name}</h3>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <h3 className="dashboard-group-name">{group.name}</h3>
+                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                            <button
+                                className="btn btn-sm btn-secondary"
+                                onClick={onEditGroup}
+                                title="Edit group name"
+                            >
+                                ✏️ Edit
+                            </button>
+                            <button
+                                className="btn btn-sm btn-danger"
+                                onClick={onDeleteGroup}
+                                title="Delete group"
+                            >
+                                🗑️ Delete
+                            </button>
+                        </div>
+                    </div>
                 </div>
 
                 <div className="card-body settlement-card">

@@ -51,6 +51,7 @@
   font-weight: 700;
   color: #1e40af;
   margin: 0;
+  flex: 1;
 }
 
 /* Settlement Card - Priority Highlight */
@@ -263,6 +264,17 @@
 
   .dashboard-group-name {
     font-size: 1.5rem;
+  }
+
+  .dashboard-group-header > div {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 1rem;
+  }
+
+  .dashboard-group-header > div > div {
+    width: 100%;
+    justify-content: flex-start;
   }
 
   .settlement-item {

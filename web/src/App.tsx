@@ -122,27 +122,13 @@ function App() {
                 ))}
               </select>
               <button
-                className="btn btn-sm btn-secondary"
-                onClick={() => startEditGroup(currentGroupId)}
-                title="Edit group name"
-              >
-                ✏️ Edit
-              </button>
-              <button
-                className="btn btn-sm btn-danger"
-                onClick={() => handleDeleteGroup(currentGroupId)}
-                title="Delete group"
-              >
-                🗑️ Delete
-              </button>
-              <button
                 className="btn btn-primary"
                 onClick={() => {
                   setShowCreateGroup(!showCreateGroup);
                   setEditingGroupId(null);
                 }}
               >
-                + New
+                + New Group
               </button>
             </div>
           </div>
@@ -210,7 +196,12 @@ function App() {
             <ExpenseForm onExpenseAdded={handleUpdate} refresh={refreshDashboard} />
           </div>
           <div className="col-md-6">
-            <Dashboard refresh={refreshDashboard} onRefresh={handleUpdate} />
+            <Dashboard
+              refresh={refreshDashboard}
+              onRefresh={handleUpdate}
+              onEditGroup={() => startEditGroup(currentGroupId)}
+              onDeleteGroup={() => handleDeleteGroup(currentGroupId)}
+            />
           </div>
         </div>
       </div>
