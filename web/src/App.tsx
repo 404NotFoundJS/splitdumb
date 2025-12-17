@@ -13,7 +13,7 @@ import "./App.css";
 
 function App() {
   const toast = useToast();
-  const [refreshDashboard, setRefreshDashboard] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
   const [groups, setGroups] = useState<Types.Group[]>([]);
   const [currentGroupId, setCurrentGroupId] = useState<number>(1);
   const [showCreateGroup, setShowCreateGroup] = useState(false);
@@ -35,9 +35,9 @@ function App() {
     fetchGroups();
   }, [fetchGroups]);
 
-  const handleUpdate = () => {
-    setRefreshDashboard(!refreshDashboard);
-  };
+  const handleUpdate = useCallback(() => {
+    setRefreshKey((k) => k + 1);
+  }, []);
 
   const handleSwitchGroup = async (groupId: number) => {
     const previousGroupId = currentGroupId;
@@ -214,7 +214,7 @@ function App() {
 
       <div className="app-container">
         <Dashboard
-          refresh={refreshDashboard}
+          refreshKey={refreshKey}
           onRefresh={handleUpdate}
           onUpdateGroup={handleUpdateGroup}
           onDeleteGroup={() => handleDeleteGroup(currentGroupId)}

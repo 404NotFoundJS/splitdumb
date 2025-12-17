@@ -1,10 +1,10 @@
-import React from "react";
+import React, { memo } from "react";
 
 interface BalanceSummaryProps {
   balances: Record<string, number>;
 }
 
-const BalanceSummary: React.FC<BalanceSummaryProps> = ({ balances }) => {
+const BalanceSummary: React.FC<BalanceSummaryProps> = memo(({ balances }) => {
   return (
     <div className="card dashboard-card mt-3">
       <div className="card-body">
@@ -24,6 +24,8 @@ const BalanceSummary: React.FC<BalanceSummaryProps> = ({ balances }) => {
       </div>
     </div>
   );
-};
+});
+
+BalanceSummary.displayName = "BalanceSummary";
 
 export default BalanceSummary;

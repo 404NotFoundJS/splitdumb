@@ -18,14 +18,14 @@ import BalanceSummary from "./BalanceSummary";
 import SettlementCard from "./SettlementCard";
 
 interface DashboardProps {
-  refresh: boolean;
+  refreshKey: number;
   onRefresh: () => void;
   onUpdateGroup: (groupId: number, newName: string) => Promise<void>;
   onDeleteGroup: () => void;
 }
 
 const Dashboard: React.FC<DashboardProps> = ({
-  refresh,
+  refreshKey,
   onRefresh,
   onUpdateGroup,
   onDeleteGroup,
@@ -58,7 +58,7 @@ const Dashboard: React.FC<DashboardProps> = ({
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchGroupData();
-  }, [refresh, fetchGroupData]);
+  }, [refreshKey, fetchGroupData]);
 
   const handleDeleteExpense = async (
     expenseId: number,
@@ -170,7 +170,7 @@ const Dashboard: React.FC<DashboardProps> = ({
             expenses={group.expenses}
             onDeleteExpense={handleDeleteExpense}
           />
-          <ExpenseForm onExpenseAdded={onRefresh} refresh={refresh} />
+          <ExpenseForm onExpenseAdded={onRefresh} refreshKey={refreshKey} />
         </div>
 
         {/* Column 3: Summary */}

@@ -5,7 +5,7 @@ import { useToast } from "../contexts/ToastContext";
 
 interface ExpenseFormProps {
   onExpenseAdded: () => void;
-  refresh: boolean;
+  refreshKey: number;
 }
 
 const CATEGORIES = [
@@ -19,7 +19,7 @@ const CATEGORIES = [
 
 const ExpenseForm: React.FC<ExpenseFormProps> = ({
   onExpenseAdded,
-  refresh,
+  refreshKey,
 }) => {
   const toast = useToast();
   const [description, setDescription] = useState("");
@@ -33,7 +33,7 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
 
   useEffect(() => {
     fetchUsers();
-  }, [refresh]);
+  }, [refreshKey]);
 
   const fetchUsers = async () => {
     try {

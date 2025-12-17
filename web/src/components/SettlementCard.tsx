@@ -1,4 +1,4 @@
-import React from "react";
+import React, { memo } from "react";
 import * as Types from "../types";
 
 interface SettlementCardProps {
@@ -6,7 +6,7 @@ interface SettlementCardProps {
   onSettle: (from: string, to: string, amount: number) => Promise<void>;
 }
 
-const SettlementCard: React.FC<SettlementCardProps> = ({
+const SettlementCard: React.FC<SettlementCardProps> = memo(({
   settlements,
   onSettle,
 }) => {
@@ -45,6 +45,8 @@ const SettlementCard: React.FC<SettlementCardProps> = ({
       )}
     </div>
   );
-};
+});
+
+SettlementCard.displayName = "SettlementCard";
 
 export default SettlementCard;
