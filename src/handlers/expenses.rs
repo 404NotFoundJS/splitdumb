@@ -3,6 +3,7 @@ use axum::{
     extract::{Path, State},
 };
 use serde::Deserialize;
+use tracing::info;
 
 use crate::errors::{AppError, AppResult};
 use crate::logic::add_expense;
@@ -17,6 +18,16 @@ pub struct CreateExpenseRequest {
     pub amount: f64,
     pub payer: String,
     pub participants: Vec<String>,
+    pub category: Option<String>,
+    pub notes: Option<String>,
+}
+
+#[derive(Deserialize)]
+pub struct UpdateExpenseRequest {
+    pub description: Option<String>,
+    pub amount: Option<f64>,
+    pub payer: Option<String>,
+    pub participants: Option<Vec<String>>,
     pub category: Option<String>,
     pub notes: Option<String>,
 }
@@ -54,7 +65,7 @@ pub async fn create_expense(
         .groups
         .iter_mut()
         .find(|g| g.id == auth_user.current_group_id)
-        .ok_or_else(|| AppError::NotFound("Current group not found".to_string()))?;
+        .ok_or_else(AppError::group_not_found)?;
 
     let payer_user = group
         .members
@@ -87,12 +98,96 @@ pub async fn create_expense(
     };
 
     add_expense(expense.clone(), group);
+    storage::save(&app_data)?;
 
-    let app_data_clone = app_data.clone();
-    drop(app_data);
+    info!(
+        expense_id = expense.id,
+        amount = expense.amount,
+        description = %expense.description,
+        "expense created"
+    );
+    Ok(Json(expense))
+}
 
-    storage::save(&app_data_clone)?;
+pub async fn update_expense(
+    State(state): State<SharedState>,
+    auth_user: AuthUser,
+    Path(id): Path<usize>,
+    Json(payload): Json<UpdateExpenseRequest>,
+) -> AppResult<Json<Expense>> {
+    if let Some(amount) = payload.amount
+        && amount <= 0.0
+    {
+        return Err(AppError::BadRequest("Amount must be positive".to_string()));
+    }
+    if let Some(ref desc) = payload.description
+        && desc.trim().is_empty()
+    {
+        return Err(AppError::BadRequest(
+            "Description cannot be empty".to_string(),
+        ));
+    }
+    if let Some(ref participants) = payload.participants
+        && participants.is_empty()
+    {
+        return Err(AppError::BadRequest(
+            "Must have at least one participant".to_string(),
+        ));
+    }
 
+    let mut app_data = state.write().map_err(|_| AppError::LockError)?;
+
+    let group = app_data
+        .groups
+        .iter_mut()
+        .find(|g| g.id == auth_user.current_group_id)
+        .ok_or_else(AppError::group_not_found)?;
+
+    let expense = group
+        .expenses
+        .iter_mut()
+        .find(|e| e.id == id)
+        .ok_or_else(|| AppError::NotFound(format!("Expense with id {} not found", id)))?;
+
+    if let Some(description) = payload.description {
+        expense.description = description.trim().to_string();
+    }
+    if let Some(amount) = payload.amount {
+        expense.amount = amount;
+    }
+    if let Some(payer_name) = payload.payer {
+        let payer = group
+            .members
+            .iter()
+            .find(|u| u.name == payer_name)
+            .ok_or_else(|| AppError::NotFound(format!("Payer '{}' not found", payer_name)))?
+            .clone();
+        expense.payer = payer;
+    }
+    if let Some(participant_names) = payload.participants {
+        let mut participants = Vec::new();
+        for name in &participant_names {
+            let user = group
+                .members
+                .iter()
+                .find(|u| u.name == *name)
+                .ok_or_else(|| AppError::NotFound(format!("Participant '{}' not found", name)))?
+                .clone();
+            participants.push(user);
+        }
+        expense.participants = participants;
+    }
+    if payload.category.is_some() {
+        expense.category = payload.category;
+    }
+    if payload.notes.is_some() {
+        expense.notes = payload.notes;
+    }
+
+    let expense = expense.clone();
+    storage::save(&app_data)?;
+
+    info!(expense_id = expense.id, "expense updated");
     Ok(Json(expense))
 }
 
@@ -107,7 +202,7 @@ pub async fn delete_expense(
         .groups
         .iter_mut()
         .find(|g| g.id == auth_user.current_group_id)
-        .ok_or_else(|| AppError::NotFound("Current group not found".to_string()))?;
+        .ok_or_else(AppError::group_not_found)?;
 
     let index = group
         .expenses
@@ -127,12 +222,9 @@ pub async fn delete_expense(
     }
 
     group.expenses.remove(index);
+    storage::save(&app_data)?;
 
-    let app_data_clone = app_data.clone();
-    drop(app_data);
-
-    storage::save(&app_data_clone)?;
-
+    info!(expense_id = id, "expense deleted");
     Ok(Json(serde_json::json!({ "success": true })))
 }
 
@@ -156,7 +248,7 @@ pub async fn settle(
         .groups
         .iter_mut()
         .find(|g| g.id == auth_user.current_group_id)
-        .ok_or_else(|| AppError::NotFound("Current group not found".to_string()))?;
+        .ok_or_else(AppError::group_not_found)?;
 
     let from_user = group
         .members
@@ -192,11 +284,13 @@ pub async fn settle(
         amount: payload.amount,
         settled_at: chrono::Utc::now().to_rfc3339(),
     });
+    storage::save(&app_data)?;
 
-    let app_data_clone = app_data.clone();
-    drop(app_data);
-
-    storage::save(&app_data_clone)?;
-
+    info!(
+        from = %payload.from,
+        to = %payload.to,
+        amount = payload.amount,
+        "settlement recorded"
+    );
     Ok(Json(expense))
 }

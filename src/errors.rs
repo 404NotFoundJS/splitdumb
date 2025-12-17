@@ -20,6 +20,16 @@ pub enum AppError {
     StorageError(#[from] std::io::Error),
 }
 
+impl AppError {
+    pub fn group_not_found() -> Self {
+        Self::NotFound("Current group not found".to_string())
+    }
+
+    pub fn phone_not_registered() -> Self {
+        Self::NotFound("Phone number not registered".to_string())
+    }
+}
+
 impl IntoResponse for AppError {
     fn into_response(self) -> Response {
         let (status, message) = match &self {

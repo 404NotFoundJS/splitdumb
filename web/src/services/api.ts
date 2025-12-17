@@ -1,4 +1,11 @@
 import axios, { AxiosError } from "axios";
+import type {
+  User,
+  Group,
+  Expense,
+  BalanceResponse,
+  SettlementsResponse,
+} from "../types";
 
 // Use same hostname as the page, with backend port 3000
 const getApiUrl = () => {
@@ -61,32 +68,34 @@ export const getMe = async (): Promise<AuthUser> => {
   return response.data;
 };
 
-export const getGroup = async () => {
+export const getGroup = async (): Promise<Group> => {
   const response = await api.get("/group");
   return response.data;
 };
 
-export const getBalances = async () => {
+export const getBalances = async (): Promise<BalanceResponse> => {
   const response = await api.get("/balances");
   return response.data;
 };
 
-export const getSettlements = async () => {
+export const getSettlements = async (): Promise<SettlementsResponse> => {
   const response = await api.get("/settlements");
   return response.data;
 };
 
-export const toggleSimplify = async () => {
+export const toggleSimplify = async (): Promise<{
+  simplify_debts: boolean;
+}> => {
   const response = await api.post("/simplify");
   return response.data;
 };
 
-export const createUser = async (phone: string) => {
+export const createUser = async (phone: string): Promise<User> => {
   const response = await api.post("/users", { phone });
   return response.data;
 };
 
-export const deleteUser = async (id: number) => {
+export const deleteUser = async (id: number): Promise<{ success: boolean }> => {
   const response = await api.delete(`/users/${id}`);
   return response.data;
 };
@@ -98,7 +107,7 @@ export const createExpense = async (
   participants: string[],
   category?: string,
   notes?: string,
-) => {
+): Promise<Expense> => {
   const response = await api.post("/expenses", {
     description,
     amount,
@@ -110,39 +119,67 @@ export const createExpense = async (
   return response.data;
 };
 
-export const deleteExpense = async (id: number) => {
+export const updateExpense = async (
+  id: number,
+  data: {
+    description?: string;
+    amount?: number;
+    payer?: string;
+    participants?: string[];
+    category?: string;
+    notes?: string;
+  },
+): Promise<Expense> => {
+  const response = await api.put(`/expenses/${id}`, data);
+  return response.data;
+};
+
+export const deleteExpense = async (
+  id: number,
+): Promise<{ success: boolean }> => {
   const response = await api.delete(`/expenses/${id}`);
   return response.data;
 };
 
-export const settle = async (from: string, to: string, amount: number) => {
+export const settle = async (
+  from: string,
+  to: string,
+  amount: number,
+): Promise<Expense> => {
   const response = await api.post("/settle", { from, to, amount });
   return response.data;
 };
 
-export const listGroups = async () => {
+export const listGroups = async (): Promise<Group[]> => {
   const response = await api.get("/groups");
   return response.data;
 };
 
-export const createGroup = async (name: string) => {
+export const createGroup = async (name: string): Promise<Group> => {
   const response = await api.post("/groups", { name });
   return response.data;
 };
 
-export const switchGroup = async (groupId: number) => {
+export const switchGroup = async (
+  groupId: number,
+): Promise<{ success: boolean; current_group_id: number }> => {
   const response = await api.put("/groups/current", {
     group_id: groupId,
   });
   return response.data;
 };
 
-export const updateGroup = async (groupId: number, name: string) => {
+export const updateGroup = async (
+  groupId: number,
+  name: string,
+): Promise<Group> => {
   const response = await api.put(`/groups/${groupId}`, { name });
   return response.data;
 };
 
-export const deleteGroup = async (groupId: number) => {
+export const deleteGroup = async (
+  groupId: number,
+): Promise<{ success: boolean; switched_group?: number }> => {
   const response = await api.delete(`/groups/${groupId}`);
   return response.data;
 };

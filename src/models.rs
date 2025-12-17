@@ -8,6 +8,8 @@ pub struct AuthUser {
     pub token: String,
     #[serde(default)]
     pub current_group_id: usize,
+    #[serde(default)]
+    pub token_expires_at: Option<String>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]

@@ -1,25 +1,18 @@
 import React from "react";
 import * as Types from "../types";
+import { formatDate } from "../utils/date";
 
 interface ExpenseListProps {
   expenses: Types.Expense[];
   onDeleteExpense: (id: number, description: string) => void;
+  onEditExpense: (expense: Types.Expense) => void;
 }
 
 const ExpenseList: React.FC<ExpenseListProps> = ({
   expenses,
   onDeleteExpense,
+  onEditExpense,
 }) => {
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year:
-        date.getFullYear() !== new Date().getFullYear() ? "numeric" : undefined,
-    });
-  };
-
   return (
     <div className="card dashboard-card mt-3">
       <div className="card-body">
@@ -51,6 +44,12 @@ const ExpenseList: React.FC<ExpenseListProps> = ({
                   )}
                 </div>
                 <div className="expense-actions">
+                  <button
+                    className="btn btn-sm btn-secondary"
+                    onClick={() => onEditExpense(expense)}
+                  >
+                    Edit
+                  </button>
                   <button
                     className="btn btn-sm btn-danger"
                     onClick={() =>

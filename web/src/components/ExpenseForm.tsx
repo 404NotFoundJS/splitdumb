@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from "react";
-import { createExpense, getGroup } from "../services/api";
+import { createExpense, updateExpense, getGroup } from "../services/api";
 import * as Types from "../types";
 import { useToast } from "../contexts/ToastContext";
 
 interface ExpenseFormProps {
   onExpenseAdded: () => void;
   refreshKey: number;
+  editingExpense?: Types.Expense | null;
+  onCancelEdit?: () => void;
 }
 
 const CATEGORIES = [
@@ -20,6 +22,8 @@ const CATEGORIES = [
 const ExpenseForm: React.FC<ExpenseFormProps> = ({
   onExpenseAdded,
   refreshKey,
+  editingExpense,
+  onCancelEdit,
 }) => {
   const toast = useToast();
   const [description, setDescription] = useState("");
@@ -31,9 +35,28 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
   const [users, setUsers] = useState<Types.User[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  const isEditing = !!editingExpense;
+
   useEffect(() => {
     fetchUsers();
   }, [refreshKey]);
+
+  useEffect(() => {
+    if (editingExpense) {
+      setDescription(editingExpense.description);
+      setAmount(editingExpense.amount);
+      setPayer(editingExpense.payer.name);
+      setParticipants(editingExpense.participants.map((p) => p.name));
+      setCategory(editingExpense.category || "");
+      setNotes(editingExpense.notes || "");
+    } else {
+      setDescription("");
+      setAmount(0);
+      setParticipants([]);
+      setCategory("");
+      setNotes("");
+    }
+  }, [editingExpense]);
 
   const fetchUsers = async () => {
     try {
@@ -64,6 +87,14 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
     setParticipants([]);
     setCategory("");
     setNotes("");
+    if (users.length > 0) {
+      setPayer(users[0].name);
+    }
+  };
+
+  const handleCancel = () => {
+    resetForm();
+    onCancelEdit?.();
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -87,27 +118,38 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
       category,
       notes,
     };
-    resetForm();
 
     try {
-      await createExpense(
-        expenseData.description,
-        expenseData.amount,
-        expenseData.payer,
-        expenseData.participants,
-        expenseData.category || undefined,
-        expenseData.notes || undefined,
-      );
+      if (isEditing && editingExpense) {
+        await updateExpense(editingExpense.id, {
+          description: expenseData.description,
+          amount: expenseData.amount,
+          payer: expenseData.payer,
+          participants: expenseData.participants,
+          category: expenseData.category || undefined,
+          notes: expenseData.notes || undefined,
+        });
+        toast.success(`Expense "${expenseData.description}" updated`);
+        onCancelEdit?.();
+      } else {
+        await createExpense(
+          expenseData.description,
+          expenseData.amount,
+          expenseData.payer,
+          expenseData.participants,
+          expenseData.category || undefined,
+          expenseData.notes || undefined,
+        );
+        toast.success(`Expense "${expenseData.description}" added`);
+        resetForm();
+      }
       onExpenseAdded();
-      toast.success(`Expense "${expenseData.description}" added successfully`);
     } catch (err) {
-      // Restore form on error
-      setDescription(expenseData.description);
-      setAmount(expenseData.amount);
-      setParticipants(expenseData.participants);
-      setCategory(expenseData.category);
-      setNotes(expenseData.notes);
-      toast.error(err instanceof Error ? err.message : "Failed to add expense");
+      toast.error(
+        err instanceof Error
+          ? err.message
+          : `Failed to ${isEditing ? "update" : "add"} expense`,
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -116,7 +158,20 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
   return (
     <div className="card form-card">
       <div className="card-body">
-        <h5 className="card-title">Add New Expense</h5>
+        <div className="form-header">
+          <h5 className="card-title">
+            {isEditing ? "Edit Expense" : "Add New Expense"}
+          </h5>
+          {isEditing && (
+            <button
+              type="button"
+              className="btn btn-sm btn-secondary"
+              onClick={handleCancel}
+            >
+              Cancel
+            </button>
+          )}
+        </div>
         <form onSubmit={handleSubmit}>
           <div className="form-group">
             <label htmlFor="expenseDescription" className="form-label">
@@ -253,7 +308,13 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({
             className="btn btn-primary w-100"
             disabled={isSubmitting}
           >
-            {isSubmitting ? "Adding..." : "Add Expense"}
+            {isSubmitting
+              ? isEditing
+                ? "Saving..."
+                : "Adding..."
+              : isEditing
+                ? "Save Changes"
+                : "Add Expense"}
           </button>
         </form>
       </div>

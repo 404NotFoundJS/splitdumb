@@ -3,6 +3,7 @@ use axum::{
     extract::{Path, State},
 };
 use serde::Deserialize;
+use tracing::info;
 
 use crate::errors::{AppError, AppResult};
 use crate::models::{AuthUser, User};
@@ -28,7 +29,7 @@ pub async fn create_user(
         .users
         .iter()
         .find(|u| u.phone == phone)
-        .ok_or_else(|| AppError::NotFound("Phone number not registered".to_string()))?;
+        .ok_or_else(AppError::phone_not_registered)?;
 
     let name = registered_user.name.clone();
 
@@ -36,7 +37,7 @@ pub async fn create_user(
         .groups
         .iter_mut()
         .find(|g| g.id == auth_user.current_group_id)
-        .ok_or_else(|| AppError::NotFound("Current group not found".to_string()))?;
+        .ok_or_else(AppError::group_not_found)?;
 
     if group.members.iter().any(|u| u.name == name) {
         return Err(AppError::BadRequest(format!(
@@ -52,12 +53,14 @@ pub async fn create_user(
     };
 
     group.members.push(user.clone());
+    storage::save(&app_data)?;
 
-    let app_data_clone = app_data.clone();
-    drop(app_data);
-
-    storage::save(&app_data_clone)?;
-
+    info!(
+        user_id = user.id,
+        name = %user.name,
+        group_id = auth_user.current_group_id,
+        "member added to group"
+    );
     Ok(Json(user))
 }
 
@@ -72,7 +75,7 @@ pub async fn delete_user(
         .groups
         .iter_mut()
         .find(|g| g.id == auth_user.current_group_id)
-        .ok_or_else(|| AppError::NotFound("Current group not found".to_string()))?;
+        .ok_or_else(AppError::group_not_found)?;
 
     let index = group
         .members
@@ -92,12 +95,15 @@ pub async fn delete_user(
         ));
     }
 
+    let removed_name = group.members[index].name.clone();
     group.members.remove(index);
+    storage::save(&app_data)?;
 
-    let app_data_clone = app_data.clone();
-    drop(app_data);
-
-    storage::save(&app_data_clone)?;
-
+    info!(
+        user_id = id,
+        name = %removed_name,
+        group_id = auth_user.current_group_id,
+        "member removed from group"
+    );
     Ok(Json(serde_json::json!({ "success": true })))
 }

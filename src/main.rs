@@ -1,5 +1,5 @@
 use axum::{
-    Router,
+    Json, Router,
     routing::{delete, get, post, put},
 };
 use clap::Parser;
@@ -123,6 +123,10 @@ async fn main() {
     }
 }
 
+async fn health_check() -> Json<serde_json::Value> {
+    Json(serde_json::json!({ "status": "ok" }))
+}
+
 async fn run_server(port: u16, data_file: &str) {
     // Initialize logging
     tracing_subscriber::registry()
@@ -135,10 +139,18 @@ async fn run_server(port: u16, data_file: &str) {
 
     // Initialize storage
     storage::init(data_file);
+    tracing::info!(data_file, "initializing storage");
     let app_data = storage::load();
+    tracing::info!(
+        groups = app_data.groups.len(),
+        users = app_data.users.len(),
+        "loaded data"
+    );
     let shared_state = Arc::new(RwLock::new(app_data));
 
     let app = Router::new()
+        // Health check
+        .route("/api/health", get(health_check))
         // Auth routes
         .route("/api/auth/register", post(auth::register))
         .route("/api/auth/login", post(auth::login))
@@ -156,7 +168,10 @@ async fn run_server(port: u16, data_file: &str) {
         .route("/api/group", get(groups::get_current_group))
         // Expense routes
         .route("/api/expenses", post(expenses::create_expense))
-        .route("/api/expenses/{id}", delete(expenses::delete_expense))
+        .route(
+            "/api/expenses/{id}",
+            put(expenses::update_expense).delete(expenses::delete_expense),
+        )
         .route("/api/settle", post(expenses::settle))
         // User routes
         .route("/api/users", post(users::create_user))

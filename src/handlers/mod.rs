@@ -10,6 +10,7 @@ use axum::{
     http::{StatusCode, request::Parts},
 };
 use std::sync::{Arc, RwLock};
+use tracing::warn;
 
 pub type SharedState = Arc<RwLock<AppData>>;
 
@@ -47,6 +48,15 @@ impl FromRequestParts<SharedState> for AuthUser {
             .find(|u| u.token == token)
             .cloned()
             .ok_or((StatusCode::UNAUTHORIZED, "Invalid token"))?;
+
+        // Check token expiry
+        if let Some(expires_at) = &user.token_expires_at
+            && let Ok(expires) = chrono::DateTime::parse_from_rfc3339(expires_at)
+            && chrono::Utc::now() > expires
+        {
+            warn!(user_id = user.id, "token expired");
+            return Err((StatusCode::UNAUTHORIZED, "Token expired"));
+        }
 
         Ok(user)
     }

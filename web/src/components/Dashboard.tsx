@@ -36,6 +36,9 @@ const Dashboard: React.FC<DashboardProps> = ({
   const [balances, setBalances] = useState<Record<string, number>>({});
   const [settlements, setSettlements] = useState<Types.Settlement[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [editingExpense, setEditingExpense] = useState<Types.Expense | null>(
+    null,
+  );
 
   const fetchGroupData = useCallback(async () => {
     setError(null);
@@ -201,8 +204,14 @@ const Dashboard: React.FC<DashboardProps> = ({
           <ExpenseList
             expenses={group.expenses}
             onDeleteExpense={handleDeleteExpense}
+            onEditExpense={setEditingExpense}
           />
-          <ExpenseForm onExpenseAdded={onRefresh} refreshKey={refreshKey} />
+          <ExpenseForm
+            onExpenseAdded={onRefresh}
+            refreshKey={refreshKey}
+            editingExpense={editingExpense}
+            onCancelEdit={() => setEditingExpense(null)}
+          />
         </div>
 
         <div className="dashboard-column">

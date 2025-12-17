@@ -3,6 +3,7 @@ use axum::{
     extract::{Path, State},
 };
 use serde::{Deserialize, Serialize};
+use tracing::info;
 
 use crate::errors::{AppError, AppResult};
 use crate::logic::{
@@ -53,7 +54,7 @@ pub async fn get_current_group(
         .iter()
         .find(|g| g.id == user.current_group_id)
         .or_else(|| app_data.groups.first())
-        .ok_or_else(|| AppError::NotFound("Current group not found".to_string()))?;
+        .ok_or_else(AppError::group_not_found)?;
 
     Ok(Json(group.clone()))
 }
@@ -96,12 +97,9 @@ pub async fn create_group(
     if is_first_group && let Some(u) = app_data.users.iter_mut().find(|u| u.id == user.id) {
         u.current_group_id = group.id;
     }
+    storage::save(&app_data)?;
 
-    let app_data_clone = app_data.clone();
-    drop(app_data);
-
-    storage::save(&app_data_clone)?;
-
+    info!(group_id = group.id, name = %group.name, user_id = user.id, "group created");
     Ok(Json(group))
 }
 
@@ -122,11 +120,7 @@ pub async fn switch_group(
     if let Some(u) = app_data.users.iter_mut().find(|u| u.id == user.id) {
         u.current_group_id = payload.group_id;
     }
-
-    let app_data_clone = app_data.clone();
-    drop(app_data);
-
-    storage::save(&app_data_clone)?;
+    storage::save(&app_data)?;
 
     Ok(Json(
         serde_json::json!({ "success": true, "current_group_id": payload.group_id }),
@@ -156,11 +150,7 @@ pub async fn update_group(
 
     group.name = name.to_string();
     let updated_group = group.clone();
-
-    let app_data_clone = app_data.clone();
-    drop(app_data);
-
-    storage::save(&app_data_clone)?;
+    storage::save(&app_data)?;
 
     Ok(Json(updated_group))
 }
@@ -189,12 +179,9 @@ pub async fn delete_group(
     } else {
         None
     };
+    storage::save(&app_data)?;
 
-    let app_data_clone = app_data.clone();
-    drop(app_data);
-
-    storage::save(&app_data_clone)?;
-
+    info!(group_id = id, user_id = user.id, "group deleted");
     Ok(Json(serde_json::json!({
         "success": true,
         "switched_group": switched_group
@@ -211,7 +198,7 @@ pub async fn get_balances(
         .groups
         .iter()
         .find(|g| g.id == user.current_group_id)
-        .ok_or_else(|| AppError::NotFound("Current group not found".to_string()))?;
+        .ok_or_else(AppError::group_not_found)?;
 
     let balances = calculate_balances(group);
     Ok(Json(BalanceResponse { balances }))
@@ -227,7 +214,7 @@ pub async fn get_settlements(
         .groups
         .iter()
         .find(|g| g.id == user.current_group_id)
-        .ok_or_else(|| AppError::NotFound("Current group not found".to_string()))?;
+        .ok_or_else(AppError::group_not_found)?;
 
     let mut settlements = if group.simplify_debts {
         calculate_simplified_settlements(group)
@@ -255,15 +242,11 @@ pub async fn toggle_simplify(
         .groups
         .iter_mut()
         .find(|g| g.id == user.current_group_id)
-        .ok_or_else(|| AppError::NotFound("Current group not found".to_string()))?;
+        .ok_or_else(AppError::group_not_found)?;
 
     group.simplify_debts = !group.simplify_debts;
     let new_value = group.simplify_debts;
-
-    let app_data_clone = app_data.clone();
-    drop(app_data);
-
-    storage::save(&app_data_clone)?;
+    storage::save(&app_data)?;
 
     Ok(Json(serde_json::json!({ "simplify_debts": new_value })))
 }
